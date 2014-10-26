@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <xs:simpleType name="Czas">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="\d+:\d+" />
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="Rocznik">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="[1-2][0-9]{3}"/>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="NrPwp">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="\d\d\d"/>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="NrPzos">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="[0-9]{5}[A-Z]?"/>
+        </xs:restriction>
+    </xs:simpleType>
+        <xs:simpleType name="NrPozos">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="G[0-9]{5}"/>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="NazwaKategorii">
+        <xs:union>
+            <xs:simpleType>
+                <xs:restriction base="xs:string">
+                    <xs:enumeration value="K-14"/>
+                    <xs:enumeration value="K-17"/>
+                    <xs:enumeration value="K-20"/>
+                    <xs:enumeration value="K-21"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:simpleType>
+                <xs:restriction base="xs:string">
+                    <xs:enumeration value="M-14"/>
+                    <xs:enumeration value="M-17"/>
+                    <xs:enumeration value="M-20"/>
+                    <xs:enumeration value="M-21"/>
+                </xs:restriction>
+            </xs:simpleType>
+        </xs:union>
+    </xs:simpleType>
+    <xs:complexType name="Lokalizacja">
+        <xs:simpleContent>
+            <xs:extension base="xs:string">
+                <xs:attribute name="gps">
+                    <xs:simpleType>
+                        <xs:restriction base="xs:string">
+                            <xs:pattern value="[NS]\d+° \d+′ \d+.\d+″, [EW]\d+° \d+′ \d+.\d+″" />
+                        </xs:restriction>
+                    </xs:simpleType>
+                </xs:attribute>
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+    <xs:complexType name="Organizacja">
+        <xs:simpleContent>
+            <xs:extension base="xs:string">
+                <xs:attribute name="url" type="xs:anyURI" />
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+    <xs:complexType name="Informacje">
+        <xs:sequence>
+            <xs:element name="ranga" type="xs:string" />
+            <xs:element name="termin" type="xs:date" />
+            <xs:element name="baza" type="Lokalizacja" />
+            <xs:element name="organizator" type="Organizacja" />
+            <xs:element name="patroni_medialni">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="patron" type="Organizacja" minOccurs="1" maxOccurs="unbounded" />
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="Wyniki">
+        <xs:sequence>
+            <xs:element name="kategoria" type="Kategoria" minOccurs="1" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="Kategoria">
+        <xs:sequence>
+            <xs:element name="zawodnik" type="Zawodnik" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+        <xs:attribute name="nazwa" type="NazwaKategorii" />
+        <xs:attribute ref="liczba_pk" />
+        <xs:attribute ref="trasa" />
+    </xs:complexType>
+    <xs:complexType name="Zawodnik">
+        <xs:sequence>
+            <xs:element name="czas" type="Czas" minOccurs="0" maxOccurs="1" />
+            <xs:element name="start" type="Czas" />
+            <xs:element name="meta" type="Czas" minOccurs="0" maxOccurs="1" />
+            <xs:group ref="NazwiskoImie" />
+            <xs:element name="klub" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="miasto" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="rocznik" type="Rocznik" minOccurs="0" maxOccurs="1" />
+            <xs:element name="nr_pwp" type="NrPwp" />
+            <xs:element name="nr_pzos" type="NrPzos" minOccurs="0" maxOccurs="1" />
+            <xs:element name="nr_pozos" type="NrPozos" minOccurs="0" maxOccurs="1" />
+            <xs:element name="pkt_ipwp">
+                <xs:simpleType>
+                    <xs:restriction base="xs:nonNegativeInteger">
+                        <xs:maxExclusive value="100" />
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:element>
+        </xs:sequence>
+        <xs:attribute name="miejsce">
+            <xs:simpleType>
+                <xs:union>
+                    <xs:simpleType>
+                        <xs:restriction base="xs:integer">
+                            <xs:minInclusive value="1" />
+                        </xs:restriction>
+                    </xs:simpleType>
+                    <xs:simpleType>
+                        <xs:restriction base="xs:string">
+                            <xs:enumeration value="NKL" />
+                            <xs:enumeration value="DSKL" />
+                        </xs:restriction>
+                    </xs:simpleType>
+                </xs:union>
+            </xs:simpleType>
+        </xs:attribute>
+    </xs:complexType>
+    <xs:complexType name="Mapy">
+        <xs:sequence>
+            <xs:element name="mapa" minOccurs="1" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:attribute name="lokalizacja" type="xs:anyURI" />
+                    <xs:attribute ref="trasa" />
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:attribute name="trasa">
+        <xs:simpleType>
+            <xs:restriction base="xs:string">
+                <xs:pattern value="[A-F]"/>
+            </xs:restriction>
+        </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="liczba_pk" type="xs:nonNegativeInteger" />
+    <xs:group name="NazwiskoImie">
+        <xs:sequence>
+            <xs:element name="nazwisko">
+                <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                        <xs:maxLength value="32" />
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:element>
+            <xs:element name="imie">
+                <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                        <xs:maxLength value="16" />
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:element>
+        </xs:sequence>
+    </xs:group>
+    <xs:element name="informacje" type="Informacje" />
+    <xs:element name="zawody">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element ref="informacje" />
+                <xs:element name="wyniki" type="Wyniki" />
+                <xs:element name="mapy" type="Mapy" />
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+</xs:schema>
