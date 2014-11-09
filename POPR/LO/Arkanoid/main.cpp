@@ -124,6 +124,13 @@ struct AABB {
     }
 };
 
+bool aabbs_overlap(Vector2D pos1, Vector2D box1,
+                   Vector2D pos2, Vector2D box2)
+{
+    return  pos2.x < pos1.x+box1.x && pos2.x+box2.x > pos1.x &&
+            pos2.y < pos1.y+box1.y && pos2.y+box2.y > pos1.y;
+}
+
 enum State {
     GAMEPLAY_STATE,
     PAUSED_STATE,
@@ -143,28 +150,52 @@ enum BonusType {
 
 constexpr unsigned gameplay_area_width = 480;
 constexpr unsigned gameplay_area_height = 640;
-constexpr size_t max_num_bricks = 256;
+constexpr size_t bricks_per_column = 16;
+constexpr size_t bricks_per_line = 13;
+constexpr float brick_width = 32;
+constexpr float brick_height = 16;
+constexpr size_t max_num_bricks = bricks_per_column*bricks_per_line;
 constexpr size_t max_num_balls = 3;
 constexpr float ball_box_width = 16;
 constexpr float ball_box_height = 16;
+constexpr float paddle_y = 460;
 constexpr float bonus_duration = 20;
 
-struct Brick {
-    Vector2D position;
-    unsigned type;
+const int default_level_data[bricks_per_column][bricks_per_line] = {
+    {0,0,0,0,0,0,0,0,0,0,0,0,0},
+    {0,0,0,0,0,0,0,0,0,0,0,0,0},
+    {0,0,0,0,0,0,0,0,0,0,0,0,0},
+    {0,0,0,0,0,0,0,0,0,0,0,0,0},
+    {0,0,0,0,0,0,0,0,0,0,0,0,0},
+    {0,0,0,0,0,0,0,0,0,0,0,0,0},
+    {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
+    {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
+    {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
+    {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
+    {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
+    {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
+    {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
+    {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
+    {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
+    {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
 };
 
-struct Ball {
-    Vector2D position;
-    Vector2D velocity;
+struct Bricks {
+    Vector2D position[max_num_bricks];
+    unsigned type[max_num_bricks];
+    size_t count = 0;
+};
+
+struct Balls {
+    Vector2D position[max_num_bricks];
+    Vector2D velocity[max_num_bricks];
+    size_t count = 1;
 };
 
 struct Gameplay {
     unsigned score;
-    Brick bricks[max_num_bricks];
-    size_t num_bricks;
-    Ball balls[max_num_balls];
-    size_t num_balls = 1;
+    Bricks bricks;
+    Balls balls;
     float paddle_x;
     float paddle_width;
     BonusType active_bonus_type;
@@ -173,34 +204,14 @@ struct Gameplay {
 
 // When there's collision, puts the projection vector into *out_proj and returns true.
 // If there's no collision, returns false.
-bool sat_aabb(const AABB &a, const AABB& b, Vector2D *out_proj) {
-    Vector2D proj;
-    int minlen = INT_MAX;
-    if(b.top() < a.bottom() && b.bottom() > a.top()) {
-        float up = a.top() - b.bottom();
-        float down = a.bottom() - b.top();
-        for(float y : {up, down}) {
-            if(abs(y) < minlen) {
-                minlen = abs(y);
-                proj = Vector2D{0, y};
-            }
-        }
-    } else return false;
-    if(b.left() < a.right() && b.right() > a.left()) {
-        int left = a.left() - b.right();
-        int right = a.right() - b.left();
-        for(float x : {left, right}) {
-            if(abs(x) < minlen) {
-                minlen = abs(x);
-                proj = Vector2D{x, 0};
-            }
-        }
-    } else return false;
-    *out_proj = proj;
-    return true;
+bool aabbs_collide(const AABB &a, const AABB& b)
+{
+    return  b.top() < a.bottom() && b.bottom() > a.top() &&
+            b.left() < a.right() && b.right() > a.left();
 }
 
-void resolve_collision(Vector2D proj, Vector2D *pos, Vector2D *velocity) {
+void resolve_collision(Vector2D proj, Vector2D *pos, Vector2D *velocity)
+{
     assert(proj.x*proj.y == 0 && proj.x+proj.y != 0);
     *pos += proj;
     if(proj.y == 0)
@@ -209,18 +220,44 @@ void resolve_collision(Vector2D proj, Vector2D *pos, Vector2D *velocity) {
         velocity->y *= -1;
 }
 
-void handle_potential_wall_collision(AABB *aabb, Vector2D *velocity) {
-    if(aabb->left() < 0)
-        resolve_collision(Vector2D{-aabb->left(),0}, &aabb->position, velocity);
-    if(aabb->right() > gameplay_area_width)
-        resolve_collision(Vector2D{gameplay_area_width - aabb->right(),0}, &aabb->position, velocity);
-    if(aabb->top() < 0)
-        resolve_collision(Vector2D{0,-aabb->top()}, &aabb->position, velocity);
-    if(aabb->bottom() > gameplay_area_height)
-        resolve_collision(Vector2D{0,gameplay_area_height - aabb->bottom()}, &aabb->position, velocity);
+void handle_wall_collisions(AABB *aabb, Vector2D *velocity)
+{
+    if((aabb->left() < 0 && velocity->x < 0) ||
+       (aabb->right() >= gameplay_area_width && velocity->x > 0))
+        velocity->x *= -1;
+    if((aabb->top() < 0 && velocity->y < 0) ||
+       (aabb->bottom() >= gameplay_area_height && velocity->y > 0))
+        velocity->y *= -1;
 }
 
+void handle_ball_vs_brick_collision(Vector2D bricks_position[], size_t num_bricks,
+                                              Vector2D bodies_position[], size_t num_bodies,
+                                              float body_width, float body_height)
+{
+    for(auto i : range(num_bodies)) {
+        for(auto j : range(num_bricks)) {
+            i = j;
+        }
+    }
+}
 
+size_t load_bricks(Vector2D position[max_num_bricks], unsigned type[max_num_bricks],
+                   const int bricks_data[bricks_per_column][bricks_per_line])
+{
+    size_t count = 0;
+    for(auto y : range(bricks_per_column)) {
+        for(auto x : range(bricks_per_line)) {
+            int code = bricks_data[y][x];
+            if(code >= 0) {
+                position[count] = {x*brick_width, y*brick_height};
+                type[count] = code;
+                ++count;
+            }
+        }
+    }
+    return count;
+}
+       
 // narysowanie napisu txt na powierzchni screen, zaczynając od punktu (x, y)
 // charset to bitmapa 128x128 zawierająca znaki
 void DrawString(SDL_Surface *screen, int x, int y, const char *text,
@@ -290,24 +327,28 @@ void DrawRectangle(SDL_Surface *screen, int x, int y, int l, int k,
 
 void draw(SDL_Surface *screen, const Gameplay &game) {
 //    unsigned czarny = SDL_MapRGB(screen->format, 0x00, 0x00, 0x00);
-//    unsigned zielony = SDL_MapRGB(screen->format, 0x00, 0xFF, 0x00);
+    unsigned zielony = SDL_MapRGB(screen->format, 0x00, 0xFF, 0x00);
     unsigned czerwony = SDL_MapRGB(screen->format, 0xFF, 0x00, 0x00);
     unsigned niebieski = SDL_MapRGB(screen->format, 0x11, 0x11, 0xCC);
-    for(size_t i=0;i<game.num_balls;++i) {
-        const Ball &ball = game.balls[i];
-        DrawRectangle(screen, ball.position.x, ball.position.y, ball_box_width, ball_box_height, czerwony, niebieski);
+    for(auto i : range(game.balls.count)) {
+        const Vector2D *position = game.balls.position;
+        DrawRectangle(screen, position[i].x, position[i].y, ball_box_width, ball_box_height, czerwony, niebieski);
+    }
+    for(auto i : range(game.bricks.count)) {
+        const Vector2D *position = game.bricks.position;
+        DrawRectangle(screen, position[i].x, position[i].y, brick_width, brick_height, zielony, niebieski);
     }
 }
 
 void physics_step(Gameplay *game) {
-    for(auto i : range(game->num_balls)) {
-        Ball &ball = game->balls[i];
-        ball.position += ball.velocity;
+    Balls &balls = game->balls;
+    for(auto i : range(balls.count)) {
+        balls.position[i] += balls.velocity[i];
         AABB aabb;
-        aabb.position = ball.position;
+        aabb.position = balls.position[i];
         aabb.box = {ball_box_width, ball_box_height};
-        handle_potential_wall_collision(&aabb, &ball.velocity);
-        ball.position = aabb.position;
+        handle_wall_collisions(&aabb, &balls.velocity[i]);
+        balls.position[i] = aabb.position;
     }
 }
 
@@ -399,11 +440,13 @@ int main(int argc, char **argv) {
 	etiSpeed = 1;
     
     Gameplay game;
-    game.num_balls = 2;
-    game.balls[0].position = {16, 16};
-    game.balls[0].velocity = {2, 2};
-    game.balls[1].position = {256, 256};
-    game.balls[1].velocity = {8, 8};
+    game.balls.count = 1;
+    game.balls.position[0] = {256, 256};
+    game.balls.velocity[0] = {8, 8};
+//    game.balls.position[1] = {16, 16};
+//    game.balls.velocity[1] = {2, 2};
+    
+    game.bricks.count = load_bricks(game.bricks.position, game.bricks.type, default_level_data);
 
 	while(!quit) {
 		t2 = SDL_GetTicks();
