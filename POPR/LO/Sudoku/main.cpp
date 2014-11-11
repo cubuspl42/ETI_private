@@ -9,8 +9,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+const bool dev_mode = true;
+
 const unsigned timeout_value = 500;
-const unsigned read_filename_timeout_value = 10000;
 const unsigned base_number = 3;
 const unsigned base_number_sq = base_number*base_number;
 const unsigned board_y = 2;
@@ -23,36 +24,11 @@ const unsigned comments_y = 1;
 const unsigned comments_x = 0;
 const unsigned possible_numbers_y = 21;
 const unsigned possible_numbers_x = 0;
-const unsigned filename_y = 22;
-const unsigned filename_x = 0;
 const unsigned help_y = 23;
 const unsigned help_x = 0;
 const int highlight_color_pair = 1;
 const int comment_color_pair = 2;
 const int conflict_color_pair = 3;
-
-enum State {
-    DEFAULT_STATE,
-    COMMENT_EDIT_STATE,
-    PROVIDE_FILENAME_STATE
-};
-
-const char* help[] ={
-// DEFAULT_STATE:
-    "[←↑→↓] Przesuwanie kursora \n"
-    "[1..9] Wstaw/nadpisz liczbę \n"
-    "[0] Usuń liczbę \n"
-    "[k] Tryb edycji komentarzy \n"
-    "[h] Podświetl wybraną liczbę \n",
-// COMMENT_EDIT_STATE:
-    "[←↑→↓] Przesuwanie kursora \n"
-    "[1..9] Dodaj/usuń liczbę z komentarza \n"
-    "[k] Tryb edycji planszy \n"
-    "[h] Podświetl wybraną liczbę \n",
-// PROVIDE_FILENAME_STATE:
-    "[enter] Potwierdź \n"
-    "[esc] Anuluj \n"
-};
 
 const char sudoku_template[] = 
 "╔═══╤═══╤═══╦═══╤═══╤═══╦═══╤═══╤═══╗\n"
@@ -89,9 +65,42 @@ struct Step {
     };
 };
 
+enum Flags {
+    COMMENT_EDIT_BIT,
+    CONFLICT_BIT,
+    HIGHLIGHT_BIT,
+    POSSIBILITIES_BIT,
+    HINT_BIT,
+};
+
+struct Sudoku {
+    uint8_t flags = 0;
+    uint8_t board[base_number_sq][base_number_sq] = {{0}};
+    uint16_t comments[base_number_sq][base_number_sq] = {{0}};
+    uint8_t pointer_y = 0, pointer_x = 0;
+    uint8_t conflict_y = 0, conflict_x = 0;
+    uint8_t hint_y = 0, hint_x = 0, hint_number = 0;
+    uint8_t highlighted_number = 0;
+    uint16_t possibilities = 0;
+    list<Step> undo_stack;
+    list<Step>::iterator last_step;
+    unsigned num_steps = 0;
+};
+
 template<typename T>
 inline bool check_bit(T n, unsigned bit) {
     return n & (1 << bit);
+}
+
+
+template<typename T>
+inline void set_bit(T *n, unsigned bit) {
+    *n |= 1 << bit;
+}
+
+template<typename T>
+inline void clear_bit(T *n, unsigned bit) {
+    *n &= ~(1 << bit);
 }
 
 template<typename T>
@@ -105,6 +114,11 @@ inline unsigned count_bits(T n) {
     for (c = 0; n; ++c)
         n &= n - 1;
     return c;
+}
+
+template<typename T>
+inline bool has_single_bit(T n) {
+   return n && !(n & (n - 1));
 }
 
 float clamp(int n, int lower, int upper) {
@@ -130,15 +144,15 @@ WINDOW *init_ncurses() {
     return win;
 }
 
-bool creates_conflict(const uint8_t board[base_number_sq][base_number_sq], uint8_t y, uint8_t x, uint8_t number,
-                      int8_t *conflict_y, int8_t *conflict_x) {
+bool creates_conflict(const Sudoku &sudoku, unsigned y, unsigned x, unsigned number,
+                      unsigned *conflict_y, unsigned *conflict_x) {
     int square_y = y/base_number*base_number;
     int square_x = x/base_number*base_number;
     for(int i = square_y; i < square_y+base_number; ++i) {
         for(int j = square_x; j < square_x+base_number; ++j) {
             if(y == i && x == j)
                 continue;
-            if(board[i][j] == number) {
+            if(sudoku.board[i][j] == number) {
                 *conflict_y = i;
                 *conflict_x = j;
                 return true;
@@ -148,7 +162,7 @@ bool creates_conflict(const uint8_t board[base_number_sq][base_number_sq], uint8
     for(int i=0; i<base_number_sq; ++i) {
         if(y == i)
             continue;
-        if(board[i][x] == number) {
+        if(sudoku.board[i][x] == number) {
             *conflict_y = i;
             *conflict_x = x;
             return true;
@@ -157,7 +171,7 @@ bool creates_conflict(const uint8_t board[base_number_sq][base_number_sq], uint8
     for(int j=0; j<base_number_sq; ++j) {
         if(x == j)
             continue;
-        if(board[y][j] == number) {
+        if(sudoku.board[y][j] == number) {
             *conflict_y = y;
             *conflict_x = j;
             return true;
@@ -167,23 +181,22 @@ bool creates_conflict(const uint8_t board[base_number_sq][base_number_sq], uint8
     return false;
 }
 
-uint16_t possible_numbers(const uint8_t board[base_number_sq][base_number_sq], uint8_t y, uint8_t x) {
-    uint16_t r = 0;
-    int8_t c;
+unsigned possible_numbers(const Sudoku &sudoku, unsigned y, unsigned x) {
+    unsigned r = 0, c = 0;
     for(int i=0;i<base_number_sq;++i) {
-        if(!creates_conflict(board, y, x, i+1, &c, &c)) {
+        if(!creates_conflict(sudoku, y, x, i+1, &c, &c)) {
             toggle_bit(&r, i);
         }
     }
     return r;
 }
 
-uint8_t simple_hint(const uint8_t board[base_number_sq][base_number_sq], uint8_t *hint_y, uint8_t *hint_x) {
+uint8_t simple_hint(Sudoku &sudoku, unsigned *hint_y, unsigned *hint_x) {
     for(int i=0; i<base_number_sq; ++i) {
         for(int j=0; j<base_number_sq; ++j) {
-            if(board[i][j])
+            if(sudoku.board[i][j])
                 continue;
-            uint16_t numbers = possible_numbers(board, i, j);
+            unsigned numbers = possible_numbers(sudoku, i, j);
             if(count_bits(numbers) == 1) {
                 for(int k=0; k<base_number_sq; ++k) {
                     if(check_bit(numbers, k)) {
@@ -198,76 +211,219 @@ uint8_t simple_hint(const uint8_t board[base_number_sq][base_number_sq], uint8_t
     return 0;
 }
 
-uint8_t hint(const uint8_t board[base_number_sq][base_number_sq], uint8_t *hint_y, uint8_t *hint_x) {
-    return simple_hint(board, hint_y, hint_x);
+unsigned advanced_hint(Sudoku &sudoku, unsigned *hint_y, unsigned *hint_x) {
+    unsigned row_numbers_masks[base_number_sq] = {0}; // maska zawieranych liczb przez dany rząd
+    unsigned column_numbers_masks[base_number_sq] = {0}; // ... daną kolumnę ...
+    unsigned square_numbers_masks[base_number][base_number] = {{0}}; // ... i kwadrat 3x3
+    
+    // konstruowanie masek
+    for(int sq_i = 0; sq_i < base_number; ++sq_i) {
+        int sq_y=sq_i*base_number;
+        for(int sq_j = 0; sq_j < base_number; ++sq_j) {
+            int sq_x=sq_j*base_number;
+            for(int i = sq_y; i < sq_y+base_number; ++i) {
+                for(int j = sq_x; j < sq_x+base_number; ++j) {
+                    unsigned n = sudoku.board[i][j];
+                    if(n) {
+                        set_bit(&row_numbers_masks[i], n-1);
+                        set_bit(&column_numbers_masks[j], n-1);
+                        set_bit(&square_numbers_masks[sq_i][sq_j], n-1);
+                    }
+                }
+            }
+        }
+    }
+    
+    // główna pętla, która trwa tak długo jak wykluczamy jakieś kolumny lub rzędy dla jakiejkolwiek liczby
+    bool progress = true;
+    while(progress) {
+        fprintf(stderr, "...\n");
+        progress = false;
+        for(int sq_i = 0; sq_i < base_number; ++sq_i) {
+            unsigned sq_y=sq_i*base_number;
+            for(int sq_j = 0; sq_j < base_number; ++sq_j) { // dla każdego kwadratu 3x3 (sq_i, sq_j)
+                fprintf(stderr, "[%d,%d]\n", sq_i, sq_j);
+                unsigned sq_x=sq_j*base_number;
+                unsigned number_rows_masks[base_number_sq] = {0}; // maska rzędów w kwadracie, w których dozwolona jest dana liczba
+                unsigned number_columns_masks[base_number_sq] = {0}; // ... kolumn ...
+                for(int i = sq_y; i < sq_y+base_number; ++i) {
+                    for(int j = sq_x; j < sq_x+base_number; ++j) { // dla każdego pola (i, j) w tym kwadracie
+                        unsigned n = sudoku.board[i][j];
+                        if(n)
+                            continue; // obchodzą nas tylko niewypełnione pola
+                        unsigned field_mask =   ~row_numbers_masks[i] & // maska dozwolonych liczb dla pola (i, j)
+                                                ~column_numbers_masks[j] &
+                                                ~square_numbers_masks[sq_i][sq_j] &
+                                                (1 << (base_number_sq)) - 1;
+                        bool bingo = has_single_bit(field_mask);
+                        for(int k = 0; k < base_number_sq; ++k) { // dla każdej możliwej liczby
+                            if(check_bit(field_mask, k)) { // jeśli jest dozwolna na tym polu
+                                if(bingo) { // jeśli tylko ona jest dozwolona: koniec
+                                    *hint_y = i;
+                                    *hint_x = j;
+                                    fprintf(stderr, "Bingo: %d\n\n", k+1);
+                                    return k+1;
+                                } else { // w innym przypadku, zaznaczamy, że jest dozwolona w danym rzędzie / kolumnie
+                                    //fprintf(stderr, "Liczba %d jest dozwolona na polu do (%d,%d)\n", k+1, i, j);
+                                    set_bit(&number_rows_masks[k], i);
+                                    set_bit(&number_columns_masks[k], j);
+                                }
+                            }
+                        }
+                    }
+                }
+                for(int k = 0; k < base_number_sq; ++k) { // dla każdej możliwej liczby
+                    bool single_row = has_single_bit(number_rows_masks[k]);
+                    bool single_column = has_single_bit(number_columns_masks[k]);
+                    if(!single_row && !single_column) // nic nie możemy zrobić
+                        continue;
+                    unsigned single_row_i = 0, single_column_j = 0;
+                    if(single_row) { // jeśli w kwadracie jest ona dozwolona tylko w jednym rzędzie
+                        for(int i = 0; i < base_number_sq; ++i) {
+                            if(check_bit(number_rows_masks[k], i)) {
+                                single_row_i = i; // zapisujemy indeks tego rzędu
+                                set_bit(&row_numbers_masks[i], k); // stwierdzamy, że się w nim zawiera
+                                progress = true; // niech trwa główna pętla
+                                fprintf(stderr, "Skreslamy %d w rzedzie %d\n", k+1, i+1);
+                            }
+                        }
+                    }
+                    if(single_column) { // ... analogicznie
+                        for(int j = 0; j < base_number_sq; ++j) {
+                            if(check_bit(number_columns_masks[k], j)) {
+                                single_column_j = j;
+                                set_bit(&column_numbers_masks[j], k);
+                                progress = true;
+                                fprintf(stderr, "Skreslamy %d w kolumnie %d\n", k+1, j+1);
+                            }
+                        }
+                    }
+                    if(single_column && single_row) { // liczba jest dozwolona tylko w jedym polu: koniec
+                        *hint_y = single_row_i;
+                        *hint_x = single_column_j;
+                        fprintf(stderr, "Droga eliminacji: %d\n\n", k+1);
+                        return k+1;
+                    } else break; // jest dozwolona tylko w jednym rzędzie lub kolumnie: kontynuujemy główną pętlę
+                }
+            }
+        }
+    }
+    return 0;
 }
 
-void perform(const Step &step, uint8_t board[base_number_sq][base_number_sq],
-             uint16_t comments[base_number_sq][base_number_sq], uint8_t board_assign, unsigned *num_steps) {
+uint8_t hint(Sudoku &sudoku, unsigned *hint_y, unsigned *hint_x) {
+    return advanced_hint(sudoku, hint_y, hint_x);
+}
+
+void give_hint(Sudoku &sudoku) {
+    unsigned hint_y = 0, hint_x = 0;
+    sudoku.hint_number = hint(sudoku, &hint_y, &hint_x);
+    if(sudoku.hint_number) {
+        set_bit(&sudoku.flags, HINT_BIT);
+        sudoku.hint_y = hint_y;
+        sudoku.hint_x = hint_x;
+    }
+}
+
+void perform(Sudoku &sudoku, const Step &step, unsigned board_assign) {
     if(step.is_comment) {
-        toggle_bit(&comments[step.y][step.x], step.comment.flipped_number - 1);
+        toggle_bit(&sudoku.comments[step.y][step.x], step.comment.flipped_number - 1);
     } else {
-        board[step.y][step.x] = board_assign;
-        ++*num_steps;
+        clear_bit(&sudoku.flags, CONFLICT_BIT);
+        clear_bit(&sudoku.flags, POSSIBILITIES_BIT);
+        clear_bit(&sudoku.flags, HINT_BIT);
+        clear_bit(&sudoku.flags, HIGHLIGHT_BIT);
+        sudoku.board[step.y][step.x] = board_assign;
+        ++sudoku.num_steps;
     }
 }
 
-void dostep(list<Step> *undo_stack, list<Step>::iterator *last_op, uint8_t board[base_number_sq][base_number_sq],
-            uint16_t comments[base_number_sq][base_number_sq], const Step &step, unsigned *num_steps) {
-    while(*last_op != undo_stack->begin()) {
-        undo_stack->pop_front();
+void dostep(Sudoku &sudoku, const Step &step) {
+    while(sudoku.last_step != sudoku.undo_stack.begin()) {
+        sudoku.undo_stack.pop_front();
     }
-    undo_stack->push_front(step);
-    *last_op = undo_stack->begin();
-    perform(step, board, comments, step.board.number_after, num_steps);
+    sudoku.undo_stack.push_front(step);
+    sudoku.last_step = sudoku.undo_stack.begin();
+    perform(sudoku, step, step.board.number_after);
 }
 
-bool redo(list<Step> *undo_stack, list<Step>::iterator *last_op, uint8_t board[base_number_sq][base_number_sq],
-          uint16_t comments[base_number_sq][base_number_sq], unsigned *num_steps) {
-    if(*last_op == undo_stack->begin())
+bool redo(Sudoku &sudoku) {
+    if(sudoku.last_step == sudoku.undo_stack.begin())
         return false;
-    Step &step = *(--*last_op);
-    perform(step, board, comments, step.board.number_after, num_steps);
+    Step &step = *(--sudoku.last_step);
+    perform(sudoku, step, step.board.number_after);
     return true;
 }
 
-bool undo(list<Step> *undo_stack, list<Step>::iterator *last_op, uint8_t board[base_number_sq][base_number_sq],
-          uint16_t comments[base_number_sq][base_number_sq], unsigned *num_steps) {
-    if(*last_op == undo_stack->end())
+bool undo(Sudoku &sudoku) {
+    if(sudoku.last_step == sudoku.undo_stack.end())
         return false;
-    Step &step = **last_op;
-    ++*last_op;
-    perform(step, board, comments, step.board.number_before, num_steps);
+    Step &step = *sudoku.last_step;
+    ++sudoku.last_step;
+    perform(sudoku, step, step.board.number_before);
     return true;
 }
 
-void put_number(list<Step> *undo_stack, list<Step>::iterator *last_op, uint8_t board[base_number_sq][base_number_sq],
-                int y, int x, int number, unsigned *num_steps) {
-    assert(number >= 0 && number <= base_number_sq); // 0 means "delete number"
-    if(board[y][x] == number)
+void put_number(Sudoku &sudoku, unsigned y, unsigned x, unsigned number) {
+    assert(number >= 0 && number <= base_number_sq);
+    if(sudoku.board[y][x] == number)
         return;
+    unsigned conflict_y = 0, conflict_x = 0;
+    if(number && creates_conflict(sudoku, y, x, number, &conflict_y, &conflict_x)) {
+        set_bit(&sudoku.flags, CONFLICT_BIT);
+        sudoku.conflict_y = conflict_y;
+        sudoku.conflict_x = conflict_x;
+        return;
+    }
     Step step;
     step.y = y, step.x = x;
-    step.board.number_before = board[y][x], step.board.number_after = number;
-    dostep(undo_stack, last_op, board, nullptr, step, num_steps);
+    step.board.number_before = sudoku.board[y][x];
+    step.board.number_after = number;
+    dostep(sudoku, step);
 }
 
-void flip_comment(list<Step> *undo_stack, list<Step>::iterator *last_op, uint16_t comments[base_number_sq][base_number_sq],
-                uint8_t y, uint8_t x, uint8_t number, unsigned *num_steps) {
+void accept_hint(Sudoku &sudoku) {
+    if(check_bit(sudoku.flags, HINT_BIT)) {
+        put_number(sudoku, sudoku.hint_y, sudoku.hint_x, sudoku.hint_number);
+    }
+}
+
+void highlight_number(Sudoku &sudoku, unsigned y, unsigned x) {
+    unsigned n = sudoku.board[y][x];
+    if(n) {
+        set_bit(&sudoku.flags, HIGHLIGHT_BIT);
+        sudoku.highlighted_number = n;
+    }
+}
+
+void list_possibilities(Sudoku &sudoku, unsigned y, unsigned x) {
+    set_bit(&sudoku.flags, POSSIBILITIES_BIT);
+    sudoku.possibilities = possible_numbers(sudoku, y, x);
+}
+
+void flip_comment(Sudoku &sudoku, unsigned y, unsigned x, unsigned number) {
     assert(number >= 1 && number <= base_number_sq);
     Step step;
     step.y = y, step.x = x, step.is_comment = true;
     step.comment.flipped_number = number;
-    dostep(undo_stack, last_op, nullptr, comments, step, num_steps);
+    dostep(sudoku, step);
 }
 
-void move_pointer(uint8_t *pointer_y, uint8_t *pointer_x, int dy, int dx, int8_t *conflict_y, uint8_t *highlight_number) {
-    int py = *pointer_y, px = *pointer_x;
+void move_pointer(Sudoku &sudoku, int dy, int dx) {
+    int py = sudoku.pointer_y;
+    int px = sudoku.pointer_x;
     py += dy, px += dx;
-    *pointer_y = clamp(py, 0, base_number_sq-1);
-    *pointer_x = clamp(px, 0, base_number_sq-1);
-    *highlight_number = 0;
-    *conflict_y = -1;
+    py = clamp(py, 0, base_number_sq-1);
+    px = clamp(px, 0, base_number_sq-1);
+    if(sudoku.pointer_y != py || sudoku.pointer_x != px) {
+        sudoku.pointer_y = py;
+        sudoku.pointer_x = px;
+        clear_bit(&sudoku.flags, HIGHLIGHT_BIT);
+        clear_bit(&sudoku.flags, CONFLICT_BIT);
+        if(!dev_mode)
+            clear_bit(&sudoku.flags, POSSIBILITIES_BIT);
+        else list_possibilities(sudoku, sudoku.pointer_y, sudoku.pointer_x);
+    }
 }
 
 void read_filename(char *filename, size_t buffer_size, const char *message) {
@@ -279,8 +435,7 @@ void read_filename(char *filename, size_t buffer_size, const char *message) {
     noecho(), curs_set(0);
 }
 
-bool load_file(const char *filename, uint8_t board[base_number_sq][base_number_sq],
-               uint16_t comments[base_number_sq][base_number_sq], list<Step> *undo_stack) {
+bool load_file(Sudoku &sudoku, const char *filename) {
     FILE *file = fopen(filename, "r");
     if(!file)
         return false;
@@ -288,23 +443,25 @@ bool load_file(const char *filename, uint8_t board[base_number_sq][base_number_s
         for(int j=0; j<base_number_sq; ++j) {
             unsigned u = 0;
             fscanf(file, "%u", &u);
-            board[i][j] = u;
-            comments[i][j] = 0;
+            sudoku.board[i][j] = u;
+            sudoku.comments[i][j] = 0;
         }
     }
-    undo_stack->clear();
+    sudoku.undo_stack.clear();
+    sudoku.last_step = sudoku.undo_stack.end();
+    sudoku.num_steps = 0;
+    sudoku.flags = 0;
     fclose(file);
     return true;
 }
 
-bool save_file(const char *filename, const uint8_t board[base_number_sq][base_number_sq],
-               const uint16_t comments[base_number_sq][base_number_sq], const list<Step> *undo_stack) {
+bool save_file(const Sudoku &sudoku, const char *filename) {
     FILE *file = fopen(filename, "w");
     if(!file)
         return false;
     for(int i=0; i<base_number_sq; ++i) {
         for(int j=0; j<base_number_sq; ++j) {
-            unsigned u = board[i][j];
+            unsigned u = sudoku.board[i][j];
             fprintf(file, "%u ", u);
         }
         fprintf(file, "\n");
@@ -313,21 +470,19 @@ bool save_file(const char *filename, const uint8_t board[base_number_sq][base_nu
     return true;
 }
 
-void load_file_dialog(uint8_t board[base_number_sq][base_number_sq],
-                      uint16_t comments[base_number_sq][base_number_sq], list<Step> *undo_stack) {
+void load_file_dialog(Sudoku &sudoku) {
     char filename[512] = "";
     read_filename(filename, sizeof(filename),
                   "Uwaga! Wczytanie pliku zaskutkuje utratą niezapisanych danych\n"
                   "Podaj nazwę pliku wejściowego:\n");
-    load_file(filename, board, comments, undo_stack);
+    load_file(sudoku, filename);
 }
 
-void save_file_dialog(const uint8_t board[base_number_sq][base_number_sq],
-                      const uint16_t comments[base_number_sq][base_number_sq], const list<Step> *undo_stack) {
+void save_file_dialog(const Sudoku &sudoku) {
     char filename[512] = "";
     read_filename(filename, sizeof(filename),
                   "Podaj nazwę pliku wyjściowego:\n");
-    save_file(filename, board, comments, undo_stack);
+    save_file(sudoku, filename);
 }
 
 void print_header(time_t start, unsigned num_steps) {
@@ -339,58 +494,54 @@ void print_header(time_t start, unsigned num_steps) {
     mvprintw(0, 0, "Czas: %d:%d Liczba kroków: %d", mm, ss, num_steps);
 }
 
-void print_board(uint8_t board[base_number_sq][base_number_sq], uint16_t comments[base_number_sq][base_number_sq],
-                 uint8_t pointer_y, uint8_t pointer_x, int8_t conflict_y, int8_t conflict_x, uint8_t highlight_number,
-                 uint8_t hint_y, uint8_t hint_x, uint8_t hint_number) {
+void print_board(const Sudoku &sudoku) {
     mvprintw(board_y, board_x, sudoku_template);
     int y = board_y+board_padding_y;
     for(int i=0; i<base_number_sq; ++i, y+=number_margin_y+1) {
         int x = board_x+board_padding_x;
         for(int j=0; j<base_number_sq; ++j, x+=number_margin_x+1) {
-            uint8_t n = board[i][j];
+            unsigned n = sudoku.board[i][j];
             chtype style = 0;
-            if (hint_number && i == hint_y && j == hint_x)
-                n = hint_number, style |= A_BLINK;
-            if(highlight_number && n == highlight_number)
+            if (check_bit(sudoku.flags, HINT_BIT) && i == sudoku.hint_y && j == sudoku.hint_x)
+                n = sudoku.hint_number, style |= A_BLINK;
+            if(check_bit(sudoku.flags, HIGHLIGHT_BIT) && n == sudoku.highlighted_number)
                 style |= COLOR_PAIR(highlight_color_pair);
-            if (i == pointer_y && j == pointer_x)
+            if (i == sudoku.pointer_y && j == sudoku.pointer_x)
                 style |= A_UNDERLINE;
-            if(i == conflict_y && j == conflict_x)
-                //mvaddch(y, x-1, '!' | A_BLINK | A_BOLD);
+            if(check_bit(sudoku.flags, CONFLICT_BIT) && i == sudoku.conflict_y && j == sudoku.conflict_x)
                 style |= COLOR_PAIR(conflict_color_pair);
             char c = n ? n+'0' : ' ';
             mvaddch(y, x, c | style);
-            
-            if(comments[i][j])
+            if(sudoku.comments[i][j])
                 mvaddch(y, x+1, '*' | A_BOLD);
         }
     }
 }
 
-void print_comments(uint16_t comments[base_number_sq][base_number_sq], uint8_t y, uint8_t x, bool bold) {
-    const char *pre = "Komentarz:";
-    int attr = bold ? A_BOLD : A_NORMAL;
+void print_comments(const Sudoku &sudoku) {
+    static const char label[] = "Komentarz:";
+    int attr = check_bit(sudoku.flags, COMMENT_EDIT_BIT)  ? A_BOLD : A_NORMAL;
     attron(attr);
-    mvprintw(comments_y, comments_x, pre);
+    mvprintw(comments_y, comments_x, label);
     attroff(attr);
     char buffer[32], *ptr = buffer;
     ptr += sprintf(ptr, " { ");
     for(int i=0; i<base_number_sq; ++i) {
-        if(check_bit(comments[y][x], i)) {
+        if(check_bit(sudoku.comments[sudoku.pointer_y][sudoku.pointer_x], i)) {
             ptr += sprintf(ptr, "%d ", i+1);
         }
     }
     ptr += sprintf(ptr, "}");
-    mvprintw(comments_y, comments_x+strlen(pre), buffer);
+    mvprintw(comments_y, comments_x+sizeof(label)-1, buffer);
 }
 
-void print_possible_numbers(uint16_t possible) {
-    if(!possible)
+void print_possible_numbers(const Sudoku &sudoku) {
+    if(!check_bit(sudoku.flags, POSSIBILITIES_BIT))
         return;
     char buffer[32], *ptr = buffer;
     ptr += sprintf(ptr, "Możliwości: [ ");
     for(int i=0; i<base_number_sq; ++i) {
-        if(check_bit(possible, i)) {
+        if(check_bit(sudoku.possibilities, i)) {
             ptr += sprintf(ptr, "%d ", i+1);
         }
     }
@@ -398,109 +549,96 @@ void print_possible_numbers(uint16_t possible) {
     mvprintw(possible_numbers_y, possible_numbers_x, buffer);
 }
 
-void print_help(State state, uint8_t y, uint8_t x) {
-    mvprintw(y, x, help[state]);
+void print_help(Sudoku &sudoku) {
+    unsigned y = help_y, x = help_x;
+    mvprintw(y, x, "[←↑→↓] Przesuwanie kursora"), ++y;
+    mvprintw(y, x, "[h] Podświetl wybraną liczbę"), ++y;
+    if(check_bit(sudoku.flags, COMMENT_EDIT_BIT)) {
+         mvprintw(y, x, "[1..9] Dodaj/usuń liczbę z komentarza"), ++y;
+         mvprintw(y, x, "[k] Tryb edycji planszy"), ++y;
+    } else {
+         mvprintw(y, x, "[1..9] Wstaw/nadpisz liczbę"), ++y;
+         mvprintw(y, x, "[0] Usuń liczbę"), ++y;
+         mvprintw(y, x, "[k] Tryb edycji komentarzy"), ++y;
+    }
 }
 
 void game() {
     time_t start;
     time(&start);
     
-    uint8_t board[base_number_sq][base_number_sq] = {{0}};
-    for(int i=0; i<base_number_sq; ++i) {
-        for(int j=0; j<base_number_sq; ++j) {
-            board[i][j] = rand()%20+1;
-            if(board[i][j] > 9)
-                board[i][j] = 0;
-        }
-    }
-    uint16_t comments[base_number_sq][base_number_sq] = {{0}};
-    uint8_t pointer_y = 0, pointer_x = 0;
-    int8_t conflict_y = -1, conflict_x = -1; // if negative, there's no conflict
-    uint8_t hint_y = 0, hint_x = 0, hint_number = 0;
-    uint8_t highlight_number = 0;
-    uint16_t possible = 0;
-    State state = DEFAULT_STATE;
-    list<Step> undo_stack;
-    list<Step>::iterator last_op = undo_stack.end();
-    unsigned num_steps = 0;
+    Sudoku sudoku;
+    sudoku.last_step = sudoku.undo_stack.end();
     
     int key = 0;
     do {
-        if(key >= '1' && key <= '9') {
+        if(key >= '0' && key <= '9') {
             int number = key - '0';
-            if(state == DEFAULT_STATE) {
-                if(!creates_conflict(board, pointer_y, pointer_x, number, &conflict_y, &conflict_x)) {
-                    put_number(&undo_stack, &last_op, board, pointer_y, pointer_x, number, &num_steps);
-                }
-            } else if(state == COMMENT_EDIT_STATE) {
-                flip_comment(&undo_stack, &last_op, comments, pointer_y, pointer_x, number, &num_steps);
+            if(check_bit(sudoku.flags, COMMENT_EDIT_BIT)) {
+                if(number)
+                    flip_comment(sudoku, sudoku.pointer_y, sudoku.pointer_x, number);
+            } else {
+                put_number(sudoku, sudoku.pointer_y, sudoku.pointer_x, number);
             }
         } else switch(key) {
             case KEY_UP:
-                move_pointer(&pointer_y, &pointer_x, -1, 0, &conflict_y, &highlight_number);
+                move_pointer(sudoku, -1, 0);
                 break;
             case KEY_DOWN:
-                move_pointer(&pointer_y, &pointer_x, 1, 0, &conflict_y, &highlight_number);
+                move_pointer(sudoku, 1, 0);
                 break;
             case KEY_LEFT:
-                move_pointer(&pointer_y, &pointer_x, 0, -1, &conflict_y, &highlight_number);
+                move_pointer(sudoku, 0, -1);
                 break;
             case KEY_RIGHT:
-                move_pointer(&pointer_y, &pointer_x, 0, 1, &conflict_y, &highlight_number);
+                move_pointer(sudoku, 0, 1);
                 break;
             case KEY_BACKSPACE:
             case KEY_DC:
-            case '0':
-                if(state == DEFAULT_STATE && board[pointer_y][pointer_x]) {
-                    conflict_y = -1;
-                    put_number(&undo_stack, &last_op, board, pointer_y, pointer_x, 0, &num_steps);
-                }
-                break;
             case 'u':
-                undo(&undo_stack, &last_op, board, comments, &num_steps);
+                undo(sudoku);
                 break;
             case 'r':
-                redo(&undo_stack, &last_op, board, comments, &num_steps);
+                redo(sudoku);
                 break;
             case 'k':
-                if(state == DEFAULT_STATE) {
-                    conflict_y = -1;
-                    state = COMMENT_EDIT_STATE;
-                } else if(state == COMMENT_EDIT_STATE) {
-                    state = DEFAULT_STATE;
-                }
+                toggle_bit(&sudoku.flags, COMMENT_EDIT_BIT);
                 break;
             case 'h':
-                conflict_y = -1;
-                highlight_number = board[pointer_y][pointer_x];
+                highlight_number(sudoku, sudoku.pointer_y, sudoku.pointer_x);
                 break;
             case 'l':
-                possible = possible_numbers(board, pointer_y, pointer_x);
+                list_possibilities(sudoku, sudoku.pointer_y, sudoku.pointer_x);
                 break;
             case 'o':
-                load_file_dialog(board, comments, &undo_stack);
+                load_file_dialog(sudoku);
                 break;
             case 'i':
-                load_file("default.txt", board, comments, &undo_stack);
+                load_file(sudoku, "default.txt");
                 break;
             case 's':
-                save_file_dialog(board, comments, &undo_stack);
+                save_file_dialog(sudoku);
                 break;
             case 'p':
-                hint_number = hint(board, &hint_y, &hint_x);
+                give_hint(sudoku);
+                break;
+            case '[':
+                accept_hint(sudoku);
+                break;
+            case ']':
+                give_hint(sudoku);
+                accept_hint(sudoku);
                 break;
             default:
                 break;
         }
         clear();
-        print_header(start, num_steps);
-        print_board(board, comments, pointer_y, pointer_x, conflict_y, conflict_x, highlight_number,
-                    hint_y, hint_x, hint_number);
-        print_help(state, help_y, help_x);
-        print_comments(comments, pointer_y, pointer_x, state == COMMENT_EDIT_STATE);
-        print_possible_numbers(possible);
-        refresh();
+        print_header(start, sudoku.num_steps);
+        print_board(sudoku);
+        print_help(sudoku);
+        print_comments(sudoku);
+        print_possible_numbers(sudoku);
+        //refresh();
     } while((key = getch()) != 'q');
 }
 
