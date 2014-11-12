@@ -1,11 +1,3 @@
-//
-//  list.h
-//  Sudoku
-//
-//  Created by Jakub Trzebiatowski on 06/11/14.
-//
-//
-
 #ifndef list_h
 #define list_h
 

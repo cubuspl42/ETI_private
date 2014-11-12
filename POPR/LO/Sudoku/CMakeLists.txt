@@ -3,6 +3,16 @@ project(Sudoku)
 #include(FindPkgConfig)
 
 set(SOURCES
+    config.h
+    common.h
+    list.h
+    map.h
+    xml.h
+    xml.cpp 
+    sudoku.h
+    sudoku.cpp
+    ncurses_gui.h
+    ncurses_gui.cpp
     main.cpp
 )
 
