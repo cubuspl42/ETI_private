@@ -135,14 +135,14 @@ static void print_board(const Sudoku &sudoku) {
         for(int j=0; j<base_number_sq; ++j, x+=number_margin_x+1) {
             unsigned n = sudoku.board[i][j];
             chtype style = 0;
-            if (check_bit(sudoku.flags, HINT_BIT) && i == sudoku.hint_y && j == sudoku.hint_x)
-                n = sudoku.hint_number, style |= A_BLINK;
             if(check_bit(sudoku.flags, HIGHLIGHT_BIT) && n == sudoku.highlighted_number)
                 style |= COLOR_PAIR(highlight_color_pair);
             if (i == sudoku.pointer_y && j == sudoku.pointer_x)
                 style |= A_UNDERLINE;
             if(check_bit(sudoku.flags, CONFLICT_BIT) && i == sudoku.conflict_y && j == sudoku.conflict_x)
                 style |= COLOR_PAIR(conflict_color_pair);
+            if (check_bit(sudoku.flags, HINT_BIT) && i == sudoku.hint_y && j == sudoku.hint_x)
+                n = sudoku.hint_number, style = A_BLINK;
             char c = n ? n+'0' : ' ';
             mvaddch(y, x, c | style);
             if(sudoku.comments[i][j])
