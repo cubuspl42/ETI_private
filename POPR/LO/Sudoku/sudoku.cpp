@@ -63,7 +63,7 @@ unsigned simple_hint(Sudoku &sudoku, unsigned *hint_y, unsigned *hint_x) {
             if(sudoku.board[i][j])
                 continue;
             unsigned numbers = possible_numbers(sudoku, i, j);
-            if(count_bits(numbers) == 1) {
+            if(has_single_bit(numbers)) {
                 for(int k=0; k<base_number_sq; ++k) {
                     if(check_bit(numbers, k)) {
                         *hint_y = i;
@@ -358,4 +358,20 @@ void load_xml_file(Sudoku &sudoku, const char *filename)
             sudoku.last_action = sudoku.undo_stack.begin();
     }
     parse_end_tag(is, "sudoku");
+}
+
+void load_txt_file(Sudoku &sudoku, const char *filename) {
+    reset_sudoku(sudoku);
+    FILE *file = fopen(filename, "r");
+    if(!file)
+        return;
+    for(int i=0; i<base_number_sq; ++i) {
+        for(int j=0; j<base_number_sq; ++j) {
+            unsigned u = 0;
+            fscanf(file, "%u", &u);
+            sudoku.board[i][j] = u;
+            sudoku.comments[i][j] = 0;
+        }
+    }
+    fclose(file);
 }

@@ -63,5 +63,6 @@ void list_possibilities(Sudoku &sudoku, unsigned y, unsigned x);
 void flip_comment(Sudoku &sudoku, unsigned y, unsigned x, unsigned number);
 void move_pointer(Sudoku &sudoku, int dy, int dx);
 void load_xml_file(Sudoku &sudoku, const char *filename);
+void load_txt_file(Sudoku &sudoku, const char *filename);
 
 #endif

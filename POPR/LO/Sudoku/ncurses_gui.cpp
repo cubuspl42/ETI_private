@@ -71,37 +71,6 @@ static void read_filename(char *filename, size_t buffer_size, const char *messag
     noecho(), curs_set(0);
 }
 
-static bool load_file(Sudoku &sudoku, const char *filename) {
-    FILE *file = fopen(filename, "r");
-    if(!file)
-        return false;
-    for(int i=0; i<base_number_sq; ++i) {
-        for(int j=0; j<base_number_sq; ++j) {
-            unsigned u = 0;
-            fscanf(file, "%u", &u);
-            sudoku.board[i][j] = u;
-            sudoku.comments[i][j] = 0;
-        }
-    }
-    reset_sudoku(sudoku);
-    fclose(file);
-    return true;
-}
-
-static bool save_file(const Sudoku &sudoku, const char *filename) {
-    FILE *file = fopen(filename, "w");
-    if(!file)
-        return false;
-    for(int i=0; i<base_number_sq; ++i) {
-        for(int j=0; j<base_number_sq; ++j) {
-            unsigned u = sudoku.board[i][j];
-            fprintf(file, "%u ", u);
-        }
-        fprintf(file, "\n");
-    }
-    fclose(file);
-    return true;
-}
 
 static void load_file_dialog(Sudoku &sudoku) {
     char filename[512] = "";
@@ -115,7 +84,7 @@ static void save_file_dialog(const Sudoku &sudoku) {
     char filename[512] = "";
     read_filename(filename, sizeof(filename),
                   "Podaj nazwę pliku wyjściowego:\n");
-    save_file(sudoku, filename);
+    //save_file(sudoku, filename);
 }
 
 void print_header(time_t start, unsigned num_steps) {
@@ -249,7 +218,10 @@ void ncurses_gui_loop() {
                 load_file_dialog(sudoku);
                 break;
             case 'i':
-                load_file(sudoku, "default.txt");
+                load_txt_file(sudoku, "default.txt");
+                break;
+            case 'z':
+                load_txt_file(sudoku, "hard/1.txt");
                 break;
             case 's':
                 save_file_dialog(sudoku);
