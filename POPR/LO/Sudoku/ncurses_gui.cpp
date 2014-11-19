@@ -159,6 +159,9 @@ static void print_help(Sudoku &sudoku) {
     unsigned y = help_y, x = help_x;
     mvprintw(y, x, "[←↑→↓] Przesuwanie kursora"), ++y;
     mvprintw(y, x, "[h] Podświetl wybraną liczbę"), ++y;
+    mvprintw(y, x, "[l] Lista możliwości dla danego pola"), ++y;
+    mvprintw(y, x, "[p] Podpowiedź"), ++y;
+    mvprintw(y, x, "[-] Odrzuć podpowiedź"), ++y;
     if(check_bit(sudoku.flags, COMMENT_EDIT_BIT)) {
         mvprintw(y, x, "[1..9] Dodaj/usuń liczbę z komentarza"), ++y;
         mvprintw(y, x, "[k] Tryb edycji planszy"), ++y;
@@ -180,11 +183,10 @@ void ncurses_gui_loop() {
     
     int key = 0;
     do {
-        if(key >= '0' && key <= '9') {
+        if(key >= '1' && key <= '9') {
             int number = key - '0';
             if(check_bit(sudoku.flags, COMMENT_EDIT_BIT)) {
-                if(number)
-                    flip_comment(sudoku, sudoku.pointer_y, sudoku.pointer_x, number);
+                flip_comment(sudoku, sudoku.pointer_y, sudoku.pointer_x, number);
             } else {
                 put_number(sudoku, sudoku.pointer_y, sudoku.pointer_x, number);
             }
@@ -203,6 +205,9 @@ void ncurses_gui_loop() {
                 break;
             case KEY_BACKSPACE:
             case KEY_DC:
+            case '0':
+                put_number(sudoku, sudoku.pointer_y, sudoku.pointer_x, 0);
+                break;
             case 'u':
                 undo(sudoku);
                 break;

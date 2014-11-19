@@ -1,6 +1,7 @@
 #include "sudoku.h"
 #include "xml.h"
 #include <stdio.h>
+#include <cstdlib>
 #include <fstream>
 
 static void square_coords(unsigned y, unsigned x, unsigned *square_y, unsigned *square_x) {
@@ -16,6 +17,14 @@ void reset_sudoku(Sudoku &sudoku) {
     for(int i=0; i<base_number_sq; ++i) {
         for(int j=0; j<base_number_sq; ++j) {
             sudoku.board[i][j] = sudoku.comments[i][j] = 0;
+        }
+    }
+    for(int i=0; i<base_number_sq; ++i) {
+        sudoku.row_numbers_masks[i] = sudoku.column_numbers_masks[i] = 0;
+    }
+    for(int i=0; i<base_number; ++i) {
+        for(int j=0; j<base_number; ++j) {
+            sudoku.square_numbers_masks[i][j] = 0;
         }
     }
 }
@@ -145,7 +154,7 @@ static unsigned hidden_single(const Sudoku &sudoku, const unsigned forbidden_num
     return 0;
 }
 
-unsigned pointing_pairs(const Sudoku &sudoku, unsigned forbidden_numbers_masks[base_number_sq][base_number_sq]) {
+static unsigned pointing_pairs(const Sudoku &sudoku, unsigned forbidden_numbers_masks[base_number_sq][base_number_sq]) {
     unsigned num_pointing_pairs = 0; // tak na prawdę, mogą to być również "pointing triples"...
     for(int sq_i = 0; sq_i < base_number; ++sq_i) {
         for(int sq_j = 0; sq_j < base_number; ++sq_j) {
@@ -493,7 +502,7 @@ void save_xml_file(Sudoku &sudoku, const char *filename)
 {
     std::ofstream os(filename);
     write_declaration(os);
-    os << "<sudoku active-state=\"" << sudoku.active_state_index << "\">\n";
+    os << "<sudoku active-state=\"" << std::max(1u, sudoku.active_state_index) << "\">\n";
     unsigned state_nr = 0;
     auto iter = sudoku.undo_stack.end();
     uint8_t board[base_number_sq][base_number_sq] = {{0}};
