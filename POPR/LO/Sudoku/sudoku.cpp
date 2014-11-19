@@ -65,26 +65,6 @@ unsigned possible_numbers(const Sudoku &sudoku, unsigned y, unsigned x) {
             base_mask;
 }
 
-unsigned simple_hint(Sudoku &sudoku, unsigned *hint_y, unsigned *hint_x) {
-    for(int i=0; i<base_number_sq; ++i) {
-        for(int j=0; j<base_number_sq; ++j) {
-            if(sudoku.board[i][j])
-                continue;
-            unsigned numbers = possible_numbers(sudoku, i, j);
-            if(has_single_bit(numbers)) {
-                for(int k=0; k<base_number_sq; ++k) {
-                    if(check_bit(numbers, k)) {
-                        *hint_y = i;
-                        *hint_x = j;
-                        return k+1;
-                    }
-                }
-            }
-        }
-    }
-    return 0;
-}
-
 static unsigned naked_single(const Sudoku &sudoku, const unsigned forbidden_numbers_masks[base_number_sq][base_number_sq],
                              unsigned *hint_y, unsigned *hint_x) {
     for(int i = 0; i < base_number_sq; ++i) {
@@ -207,7 +187,7 @@ unsigned pointing_pairs(const Sudoku &sudoku, unsigned forbidden_numbers_masks[b
     return num_pointing_pairs;
 }
 
-unsigned advanced_hint(Sudoku &sudoku, unsigned *hint_y, unsigned *hint_x) {
+unsigned hint(Sudoku &sudoku, unsigned *hint_y, unsigned *hint_x) {
     unsigned forbidden_numbers_masks[base_number_sq][base_number_sq] = {{0}};
     
     // na wstępie: zaznaczamy wpływ już wypełnionych pól
@@ -253,10 +233,6 @@ unsigned advanced_hint(Sudoku &sudoku, unsigned *hint_y, unsigned *hint_x) {
         }
     }
     return 0;
-}
-
-unsigned hint(Sudoku &sudoku, unsigned *hint_y, unsigned *hint_x) {
-    return advanced_hint(sudoku, hint_y, hint_x);
 }
 
 void give_hint(Sudoku &sudoku) {
