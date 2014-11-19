@@ -6,6 +6,8 @@
 #include <stdlib.h>
 
 const unsigned timeout_value = 500;
+const unsigned header_y = 0;
+const unsigned header_x = 0;
 const unsigned board_y = 2;
 const unsigned board_x = 0;
 const unsigned board_padding_y = 1;
@@ -71,7 +73,6 @@ static void read_filename(char *filename, size_t buffer_size, const char *messag
     noecho(), curs_set(0);
 }
 
-
 static void load_file_dialog(Sudoku &sudoku) {
     char filename[512] = "";
     read_filename(filename, sizeof(filename),
@@ -83,11 +84,11 @@ static void load_file_dialog(Sudoku &sudoku) {
     else load_xml_file(sudoku, filename);
 }
 
-static void save_file_dialog(const Sudoku &sudoku) {
+static void save_file_dialog(Sudoku &sudoku) {
     char filename[512] = "";
     read_filename(filename, sizeof(filename),
                   "Podaj nazwę pliku wyjściowego:\n");
-    //save_file(sudoku, filename);
+    save_xml_file(sudoku, filename);
 }
 
 void print_header(time_t start, unsigned num_steps) {
@@ -96,7 +97,7 @@ void print_header(time_t start, unsigned num_steps) {
     int seconds = (int)difftime(now, start);
     int ss = seconds % 60;
     int mm = seconds / 60;
-    mvprintw(0, 0, "Czas: %d:%d Liczba kroków: %d", mm, ss, num_steps);
+    mvprintw(header_y, header_x, "Czas: %d:%d Liczba kroków: %d", mm, ss, num_steps);
 }
 
 static void print_board(const Sudoku &sudoku) {
@@ -107,14 +108,14 @@ static void print_board(const Sudoku &sudoku) {
         for(int j=0; j<base_number_sq; ++j, x+=number_margin_x+1) {
             unsigned n = sudoku.board[i][j];
             chtype style = 0;
-            if(check_bit(sudoku.flags, HIGHLIGHT_BIT) && n == sudoku.highlighted_number)
-                style |= COLOR_PAIR(highlight_color_pair);
-            if (i == sudoku.pointer_y && j == sudoku.pointer_x)
-                style |= A_UNDERLINE;
-            if(check_bit(sudoku.flags, CONFLICT_BIT) && i == sudoku.conflict_y && j == sudoku.conflict_x)
-                style |= COLOR_PAIR(conflict_color_pair);
             if (check_bit(sudoku.flags, HINT_BIT) && i == sudoku.hint_y && j == sudoku.hint_x)
                 n = sudoku.hint_number, style = A_BLINK;
+            else if(check_bit(sudoku.flags, HIGHLIGHT_BIT) && n == sudoku.highlighted_number)
+                style = COLOR_PAIR(highlight_color_pair);
+            else if(check_bit(sudoku.flags, CONFLICT_BIT) && i == sudoku.conflict_y && j == sudoku.conflict_x)
+                style = COLOR_PAIR(conflict_color_pair);
+            if (i == sudoku.pointer_y && j == sudoku.pointer_x)
+                style |= A_UNDERLINE;
             char c = n ? n+'0' : ' ';
             mvaddch(y, x, c | style);
             if(sudoku.comments[i][j])
@@ -221,7 +222,7 @@ void ncurses_gui_loop() {
                 load_file_dialog(sudoku);
                 break;
             case 'i':
-                load_txt_file(sudoku, "default.txt");
+                load_xml_file(sudoku, "default.xml");
                 break;
             case 'z':
                 load_txt_file(sudoku, "hard/1.txt");
@@ -234,6 +235,9 @@ void ncurses_gui_loop() {
                 break;
             case 'p':
                 give_hint(sudoku);
+                break;
+            case '-':
+                reject_hint(sudoku);
                 break;
             case '[':
                 accept_hint(sudoku);
@@ -251,7 +255,6 @@ void ncurses_gui_loop() {
         print_help(sudoku);
         print_comments(sudoku);
         print_possible_numbers(sudoku);
-        //refresh();
     } while((key = getch()) != 'q');
     
     delwin(mainwin);

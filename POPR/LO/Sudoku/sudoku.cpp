@@ -13,6 +13,11 @@ void reset_sudoku(Sudoku &sudoku) {
     sudoku.last_action = sudoku.undo_stack.end();
     sudoku.num_actions = 0;
     sudoku.flags = 0;
+    for(int i=0; i<base_number_sq; ++i) {
+        for(int j=0; j<base_number_sq; ++j) {
+            sudoku.board[i][j] = sudoku.comments[i][j] = 0;
+        }
+    }
 }
 
 bool creates_conflict(const Sudoku &sudoku, unsigned y, unsigned x, unsigned number,
@@ -53,13 +58,11 @@ bool creates_conflict(const Sudoku &sudoku, unsigned y, unsigned x, unsigned num
 }
 
 unsigned possible_numbers(const Sudoku &sudoku, unsigned y, unsigned x) {
-    unsigned r = 0, c = 0;
-    for(int i=0;i<base_number_sq;++i) {
-        if(!creates_conflict(sudoku, y, x, i+1, &c, &c)) {
-            toggle_bit(&r, i);
-        }
-    }
-    return r;
+    unsigned sq_i = y/base_number, sq_j=x/base_number;
+    return  ~sudoku.row_numbers_masks[y] &
+            ~sudoku.column_numbers_masks[x] &
+            ~sudoku.square_numbers_masks[sq_i][sq_j] &
+            base_mask;
 }
 
 unsigned simple_hint(Sudoku &sudoku, unsigned *hint_y, unsigned *hint_x) {
@@ -88,7 +91,7 @@ static unsigned naked_single(const Sudoku &sudoku, const unsigned forbidden_numb
         for(int j = 0; j < base_number_sq; ++j) {
             if(sudoku.board[i][j])
                 continue;
-            unsigned allowed_numbers_mask = ~forbidden_numbers_masks[i][j] & (1<<base_number_sq)-1;
+            unsigned allowed_numbers_mask = ~forbidden_numbers_masks[i][j] & base_mask;
             if(has_single_bit(allowed_numbers_mask)) {
                 *hint_y = i;
                 *hint_x = j;
@@ -266,7 +269,7 @@ void give_hint(Sudoku &sudoku) {
     }
 }
 
-void perform_action(Sudoku &sudoku, const Action &action, unsigned board_assign) {
+void perform_action(Sudoku &sudoku, const Action &action, unsigned board_new_number) {
     if(action.is_comment) {
         toggle_bit(&sudoku.comments[action.y][action.x], action.comment.flipped_number - 1);
     } else {
@@ -274,7 +277,20 @@ void perform_action(Sudoku &sudoku, const Action &action, unsigned board_assign)
         clear_bit(&sudoku.flags, POSSIBILITIES_BIT);
         clear_bit(&sudoku.flags, HINT_BIT);
         clear_bit(&sudoku.flags, HIGHLIGHT_BIT);
-        sudoku.board[action.y][action.x] = board_assign;
+        unsigned y = action.y, x = action.x;
+        unsigned sq_y = y/base_number, sq_x = x/base_number;
+        auto &board_current_number = sudoku.board[y][x];
+        if(board_current_number) {
+            clear_bit(&sudoku.row_numbers_masks[y], board_current_number-1);
+            clear_bit(&sudoku.column_numbers_masks[x], board_current_number-1);
+            clear_bit(&sudoku.square_numbers_masks[sq_y][sq_x], board_current_number-1);
+        }
+        if(board_new_number) {
+            set_bit(&sudoku.row_numbers_masks[y], board_new_number-1);
+            set_bit(&sudoku.column_numbers_masks[x], board_new_number-1);
+            set_bit(&sudoku.square_numbers_masks[sq_y][sq_x], board_new_number-1);
+        }
+        board_current_number = board_new_number;
         ++sudoku.num_actions;
     }
 }
@@ -286,6 +302,7 @@ void do_action(Sudoku &sudoku, const Action &action) {
     sudoku.undo_stack.push_front(action);
     sudoku.last_action = sudoku.undo_stack.begin();
     perform_action(sudoku, action, action.board.number_after);
+    ++sudoku.active_state_index;
 }
 
 bool redo(Sudoku &sudoku) {
@@ -293,6 +310,7 @@ bool redo(Sudoku &sudoku) {
         return false;
     Action &action = *(--sudoku.last_action);
     perform_action(sudoku, action, action.board.number_after);
+    ++sudoku.active_state_index;
     return true;
 }
 
@@ -302,6 +320,7 @@ bool undo(Sudoku &sudoku) {
     Action &action = *sudoku.last_action;
     ++sudoku.last_action;
     perform_action(sudoku, action, action.board.number_before);
+    --sudoku.active_state_index;
     return true;
 }
 
@@ -327,6 +346,10 @@ void accept_hint(Sudoku &sudoku) {
     if(check_bit(sudoku.flags, HINT_BIT)) {
         put_number(sudoku, sudoku.hint_y, sudoku.hint_x, sudoku.hint_number);
     }
+}
+
+void reject_hint(Sudoku &sudoku) {
+    clear_bit(&sudoku.flags, HINT_BIT);
 }
 
 void highlight_number(Sudoku &sudoku, unsigned y, unsigned x) {
@@ -390,6 +413,7 @@ static unsigned parse_number_sequence(std::istream& is, int numbers[], unsigned 
 
 void load_xml_file(Sudoku &sudoku, const char *filename)
 {
+    auto active_action = sudoku.undo_stack.end();
     reset_sudoku(sudoku);
     std::ifstream is(filename);
     expect_valid_declaration(is);
@@ -416,8 +440,11 @@ void load_xml_file(Sudoku &sudoku, const char *filename)
                 int comment_numbers[base_number_sq];
                 unsigned mask = 0, xor_mask = 0;
                 unsigned n = parse_number_sequence(is, comment_numbers, base_number_sq);
-                for(unsigned k = 0; k < n; ++k)
-                    set_bit(&mask, comment_numbers[k]-1);
+                for(unsigned k = 0; k < n; ++k) {
+                    unsigned c = comment_numbers[k];
+                    if(c)
+                        set_bit(&mask, c-1);
+                }
                 xor_mask = mask ^ sudoku.comments[i][j];
                 for(unsigned k = 0; k < base_number_sq; ++k) {
                     if(check_bit(xor_mask, k))
@@ -429,9 +456,82 @@ void load_xml_file(Sudoku &sudoku, const char *filename)
         }
         parse_end_tag(is, "state");
         if(active_state == curent_state)
-            sudoku.last_action = sudoku.undo_stack.begin();
+            active_action = sudoku.undo_stack.begin();
     }
     parse_end_tag(is, "sudoku");
+    if(active_action != sudoku.undo_stack.end()) {
+        while(sudoku.last_action != active_action)
+            undo(sudoku);
+    }
+}
+
+static void write_state(std::ostream &os, uint8_t board[base_number_sq][base_number_sq],
+                        uint16_t comments[base_number_sq][base_number_sq], unsigned state_nr) {
+    write_indentation(os, 1);
+    os << "<state nr =\"" << state_nr << "\">\n";
+    write_indentation(os, 2);
+    os << "<board>\n";
+    for(int i = 0; i < base_number_sq; ++i) {
+        write_indentation(os, 3);
+        for(int j = 0; j < base_number_sq; ++j) {
+            unsigned n = board[i][j];
+            if(n)
+                os << n << ' ';
+            else os << "- ";
+        }
+        os << "\n";
+    }
+    write_indentation(os, 2);
+    os << "</board>\n";
+    unsigned has_comments = 0;
+    for(int i = 0; i < base_number_sq; ++i)
+        for(int j = 0; j < base_number_sq; ++j)
+            has_comments += comments[i][j];
+    if((bool)has_comments) {
+        write_indentation(os, 2);
+        os << "<comments>\n";
+        for(int i = 0; i < base_number_sq; ++i) {
+            for(int j = 0; j < base_number_sq; ++j) {
+                unsigned c = comments[i][j];
+                if(c) {
+                    write_indentation(os, 3);
+                    os << "<comment row=\"" << i << "\" col=\"" << j << "\">";
+                    for(int k = 0; k < base_number_sq; ++k) {
+                        if(check_bit(c, k)) {
+                            os << k+1 << ' ';
+                        }
+                    }
+                    os << "</comment>\n";
+                }
+            }
+        }
+        write_indentation(os, 2);
+        os << "</comments>\n";
+    }
+    write_indentation(os, 1);
+    os << "</state>\n";
+    os << "</sudoku>\n";
+}
+
+void save_xml_file(Sudoku &sudoku, const char *filename)
+{
+    std::ofstream os(filename);
+    write_declaration(os);
+    os << "<sudoku active-state=\"" << sudoku.active_state_index << "\">\n";
+    unsigned state_nr = 0;
+    auto iter = sudoku.undo_stack.end();
+    uint8_t board[base_number_sq][base_number_sq] = {{0}};
+    uint16_t comments[base_number_sq][base_number_sq] = {{0}};
+    do {
+        --iter;
+        Action &action = *iter;
+        if(action.is_comment) {
+            toggle_bit(&comments[action.y][action.x], action.comment.flipped_number - 1);
+        } else {
+            board[action.y][action.x] = action.board.number_after;
+        }
+        write_state(os, board, comments, ++state_nr);
+    } while(iter != sudoku.undo_stack.begin());
 }
 
 void load_txt_file(Sudoku &sudoku, const char *filename) {
@@ -443,8 +543,7 @@ void load_txt_file(Sudoku &sudoku, const char *filename) {
         for(int j=0; j<base_number_sq; ++j) {
             unsigned u = 0;
             fscanf(file, "%u", &u);
-            sudoku.board[i][j] = u;
-            sudoku.comments[i][j] = 0;
+            put_number(sudoku, i, j, u);
         }
     }
     fclose(file);

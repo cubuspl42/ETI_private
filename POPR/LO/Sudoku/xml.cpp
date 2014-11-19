@@ -1,6 +1,8 @@
 #include "xml.h"
 #include <ctype.h>
 
+static const char *valid_declaration = "<?xml version=\"1.0\"?>";
+
 static void expect_char(std::istream &is, char c)
 {
     if(is.peek() != c) {
@@ -26,13 +28,13 @@ void expect_valid_declaration(std::istream &is)
 {
     std::string decl;
     getline(is, decl);
-    if(decl != "<?xml version=\"1.0\"?>") {
+    if(decl != valid_declaration) {
         fprintf(stderr, "Deklaracja różna od <?xml version=\"1.0\"?>\n");
         is.setstate(std::ios::failbit);
     }
 }
 
-void parse_start_tag(std::istream &is, const std::string &name, map<std::string, std::string, max_attributes> &attrs)
+void parse_start_tag(std::istream &is, const std::string &name, AttrMap &attrs)
 {
     fprintf(stderr, "%d: Otwieranie tagu %s\n", (int)is.tellg(), name.c_str());
     auto start = is.tellg();
@@ -67,7 +69,7 @@ void parse_start_tag(std::istream &is, const std::string &name, map<std::string,
     }
 }
 
-bool try_parse_start_tag(std::istream &is, const std::string &name, map<std::string, std::string, max_attributes> &attrs) {
+bool try_parse_start_tag(std::istream &is, const std::string &name, AttrMap &attrs) {
     if(!is) {
         fprintf(stderr, "Strumień zastano w złym stanie (%s)\n", name.c_str());
         return false;
@@ -97,4 +99,13 @@ void parse_end_tag(std::istream &is, const std::string &name)
     expect_char(is, '>');
     if(!is)
         is.seekg(start);
+}
+
+void write_declaration(std::ostream &os) {
+    os << valid_declaration << "\n";
+}
+
+void write_indentation(std::ostream &os,unsigned indent_level) {
+    for(unsigned i = 0; i < indent_level; ++i)
+        os << "    ";
 }
