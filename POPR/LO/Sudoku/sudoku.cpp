@@ -3,6 +3,11 @@
 #include <stdio.h>
 #include <fstream>
 
+static void square_coords(unsigned y, unsigned x, unsigned *square_y, unsigned *square_x) {
+    *square_y = y/base_number*base_number;
+    *square_x = x/base_number*base_number;
+}
+
 void reset_sudoku(Sudoku &sudoku) {
     sudoku.undo_stack.clear();
     sudoku.last_action = sudoku.undo_stack.end();
@@ -77,102 +82,171 @@ unsigned simple_hint(Sudoku &sudoku, unsigned *hint_y, unsigned *hint_x) {
     return 0;
 }
 
-// TODO: Naprawić tę funkcję. Ma błędy w założeniach.
-unsigned advanced_hint(Sudoku &sudoku, unsigned *hint_y, unsigned *hint_x) {
-    unsigned row_numbers_masks[base_number_sq] = {0}; // maska zawieranych liczb przez dany rząd
-    unsigned column_numbers_masks[base_number_sq] = {0}; // ... daną kolumnę ...
-    unsigned square_numbers_masks[base_number][base_number] = {{0}}; // ... i kwadrat 3x3
-    
-    // konstruowanie masek
+static unsigned naked_single(const Sudoku &sudoku, const unsigned forbidden_numbers_masks[base_number_sq][base_number_sq],
+                             unsigned *hint_y, unsigned *hint_x) {
+    for(int i = 0; i < base_number_sq; ++i) {
+        for(int j = 0; j < base_number_sq; ++j) {
+            if(sudoku.board[i][j])
+                continue;
+            unsigned allowed_numbers_mask = ~forbidden_numbers_masks[i][j] & (1<<base_number_sq)-1;
+            if(has_single_bit(allowed_numbers_mask)) {
+                *hint_y = i;
+                *hint_x = j;
+                return lsb_bit_index(allowed_numbers_mask)+1;
+            }
+        }
+    }
+    return 0;
+}
+
+static unsigned hidden_single(const Sudoku &sudoku, const unsigned forbidden_numbers_masks[base_number_sq][base_number_sq],
+                              unsigned *hint_y, unsigned *hint_x) {
     for(int sq_i = 0; sq_i < base_number; ++sq_i) {
-        int sq_y=sq_i*base_number;
+        for(int sq_j = 0; sq_j < base_number; ++sq_j) { // dla każdego kwadratu 3x3 (sq_i, sq_j)
+            unsigned sq_y=sq_i*base_number, sq_x=sq_j*base_number;
+            for(int k = 0; k < base_number_sq; ++k) {
+                int num_candidates = 0;
+                unsigned y, x;
+                for(int i = sq_y; i < sq_y+base_number; ++i) {
+                    for(int j = sq_x; j < sq_x+base_number; ++j) {
+                        if(sudoku.board[i][j])
+                            continue;
+                        if(check_bit(~forbidden_numbers_masks[i][j], k)) {
+                            ++num_candidates;
+                            y = i, x = j;
+                        }
+                    }
+                }
+                if(num_candidates == 1) {
+                    *hint_y = y, *hint_x = x;
+                    fprintf(stderr, "hidden_single: square [%d, %d]\n", sq_i, sq_j);
+                    return k+1;
+                }
+            }
+        }
+    }
+    struct {
+        unsigned num_candidates = 0;
+        unsigned index = 0;
+    } row_data[base_number_sq][base_number_sq], column_data[base_number_sq][base_number_sq];
+    for(int i = 0; i < base_number_sq; ++i) {
+        for(int j = 0; j < base_number_sq; ++j) {
+            if(sudoku.board[i][j])
+                continue;
+            for(int k = 0; k < base_number_sq; ++k) {
+                if(check_bit(~forbidden_numbers_masks[i][j], k)) {
+                    ++row_data[k][i].num_candidates;
+                    ++column_data[k][j].num_candidates;
+                    row_data[k][i].index = j;
+                    column_data[k][j].index = i;
+                }
+            }
+        }
+    }
+    for(int k = 0; k < base_number_sq; ++k) {
+        for(int i = 0; i < base_number_sq; ++i) {
+            if(row_data[k][i].num_candidates == 1) {
+                *hint_y = i, *hint_x = row_data[k][i].index;
+                fprintf(stderr, "hidden_single: row %d (candidates: %d)\n", i, row_data[k][i].num_candidates);
+                return k+1;
+            }
+        }
+        for(int j = 0; j < base_number_sq; ++j) {
+            if(column_data[k][j].num_candidates == 1) {
+                *hint_y = column_data[k][j].index, *hint_x = j;
+                fprintf(stderr, "hidden_single: column %d (candidates: %d)\n", j, column_data[k][j].num_candidates);
+                return k+1;
+            }
+        }
+    }
+    return 0;
+}
+
+unsigned pointing_pairs(const Sudoku &sudoku, unsigned forbidden_numbers_masks[base_number_sq][base_number_sq]) {
+    unsigned num_pointing_pairs = 0; // tak na prawdę, mogą to być również "pointing triples"...
+    for(int sq_i = 0; sq_i < base_number; ++sq_i) {
         for(int sq_j = 0; sq_j < base_number; ++sq_j) {
-            int sq_x=sq_j*base_number;
-            for(int i = sq_y; i < sq_y+base_number; ++i) {
-                for(int j = sq_x; j < sq_x+base_number; ++j) {
-                    unsigned n = sudoku.board[i][j];
-                    if(n) {
-                        set_bit(&row_numbers_masks[i], n-1);
-                        set_bit(&column_numbers_masks[j], n-1);
-                        set_bit(&square_numbers_masks[sq_i][sq_j], n-1);
+            fprintf(stderr, "square [%d, %d]\n", sq_i, sq_j);
+            unsigned sq_y=sq_i*base_number, sq_x=sq_j*base_number;
+            for(int k = 0; k < base_number_sq; ++k) {
+                unsigned row_mask = 0, column_mask = 0;
+                for(int i = sq_y; i < sq_y+base_number; ++i) {
+                    for(int j = sq_x; j < sq_x+base_number; ++j) {
+                        if(sudoku.board[i][j])
+                            continue;
+                        if(check_bit(~forbidden_numbers_masks[i][j], k)) {
+                            set_bit(&row_mask, i);
+                            set_bit(&column_mask, j);
+                        }
+                    }
+                }
+                if(has_single_bit(row_mask)) {
+                    ++num_pointing_pairs;
+                    unsigned i = lsb_bit_index(row_mask);
+                    fprintf(stderr, "pointing_pair: %d (row %d)\n", k+1, i);
+                    for(int j = 0; j < base_number_sq; ++j) {
+                        if(j < sq_x || j >= sq_x+base_number)
+                            set_bit(&forbidden_numbers_masks[i][j], k);
+                    }
+                }
+                if(has_single_bit(column_mask)) {
+                    ++num_pointing_pairs;
+                    unsigned j = lsb_bit_index(column_mask);
+                    fprintf(stderr, "pointing_pair: %d (column %d)\n", k+1, j);
+                    for(int i = 0; i < base_number_sq; ++i) {
+                        if(i < sq_y || i >= sq_y+base_number)
+                            set_bit(&forbidden_numbers_masks[i][j], k);
                     }
                 }
             }
         }
     }
+    return num_pointing_pairs;
+}
+
+unsigned advanced_hint(Sudoku &sudoku, unsigned *hint_y, unsigned *hint_x) {
+    unsigned forbidden_numbers_masks[base_number_sq][base_number_sq] = {{0}};
     
-    // główna pętla, która trwa tak długo jak wykluczamy jakieś kolumny lub rzędy dla jakiejkolwiek liczby
+    // na wstępie: zaznaczamy wpływ już wypełnionych pól
+    for(int i = 0; i < base_number_sq; ++i) {
+        for(int j = 0; j < base_number_sq; ++j) {
+            unsigned n = sudoku.board[i][j];
+            if(n) {
+                unsigned square_y, square_x;
+                square_coords(i, j, &square_y, &square_x);
+                for(int x = 0; x < base_number_sq; ++x)
+                    set_bit(&forbidden_numbers_masks[i][x], n-1);
+                for(int y = 0; y < base_number_sq; ++y)
+                    set_bit(&forbidden_numbers_masks[y][j], n-1);
+                for(int y = square_y; y < square_y+base_number; ++y)
+                    for(int x = square_x; x < square_x+base_number; ++x)
+                        set_bit(&forbidden_numbers_masks[y][x], n-1);
+            }
+        }
+    }
+    
+    // główna pętla, która trwa tak długo jak znajdujemy nowe "pointing pairs"
+    unsigned hint = 0;
+    unsigned num_pointing_pairs = 0;
     bool progress = true;
     while(progress) {
         fprintf(stderr, "...\n");
         progress = false;
-        for(int sq_i = 0; sq_i < base_number; ++sq_i) {
-            unsigned sq_y=sq_i*base_number;
-            for(int sq_j = 0; sq_j < base_number; ++sq_j) { // dla każdego kwadratu 3x3 (sq_i, sq_j)
-                fprintf(stderr, "[%d,%d]\n", sq_i, sq_j);
-                unsigned sq_x=sq_j*base_number;
-                unsigned number_rows_masks[base_number_sq] = {0}; // maska rzędów w kwadracie, w których dozwolona jest dana liczba
-                unsigned number_columns_masks[base_number_sq] = {0}; // ... kolumn ...
-                for(int i = sq_y; i < sq_y+base_number; ++i) {
-                    for(int j = sq_x; j < sq_x+base_number; ++j) { // dla każdego pola (i, j) w tym kwadracie
-                        unsigned n = sudoku.board[i][j];
-                        if(n)
-                            continue; // obchodzą nas tylko niewypełnione pola
-                        unsigned field_mask =   ~row_numbers_masks[i] & // maska dozwolonych liczb dla pola (i, j)
-                        ~column_numbers_masks[j] &
-                        ~square_numbers_masks[sq_i][sq_j] &
-                        (1 << (base_number_sq)) - 1;
-                        bool bingo = has_single_bit(field_mask);
-                        for(int k = 0; k < base_number_sq; ++k) { // dla każdej możliwej liczby
-                            if(check_bit(field_mask, k)) { // jeśli jest dozwolna na tym polu
-                                if(bingo) { // jeśli tylko ona jest dozwolona: koniec
-                                    *hint_y = i;
-                                    *hint_x = j;
-                                    fprintf(stderr, "Bingo: %d\n\n", k+1);
-                                    return k+1;
-                                } else { // w innym przypadku, zaznaczamy, że jest dozwolona w danym rzędzie / kolumnie
-                                    //fprintf(stderr, "Liczba %d jest dozwolona na polu do (%d,%d)\n", k+1, i, j);
-                                    set_bit(&number_rows_masks[k], i);
-                                    set_bit(&number_columns_masks[k], j);
-                                }
-                            }
-                        }
-                    }
-                }
-                for(int k = 0; k < base_number_sq; ++k) { // dla każdej możliwej liczby
-                    bool single_row = has_single_bit(number_rows_masks[k]);
-                    bool single_column = has_single_bit(number_columns_masks[k]);
-                    if(!single_row && !single_column) // nic nie możemy zrobić
-                        continue;
-                    unsigned single_row_i = 0, single_column_j = 0;
-                    if(single_row) { // jeśli w kwadracie jest ona dozwolona tylko w jednym rzędzie
-                        for(int i = 0; i < base_number_sq; ++i) {
-                            if(check_bit(number_rows_masks[k], i)) {
-                                single_row_i = i; // zapisujemy indeks tego rzędu
-                                set_bit(&row_numbers_masks[i], k); // stwierdzamy, że się w nim zawiera
-                                progress = true; // niech trwa główna pętla
-                                fprintf(stderr, "Skreslamy %d w rzedzie %d\n", k+1, i+1);
-                            }
-                        }
-                    }
-                    if(single_column) { // ... analogicznie
-                        for(int j = 0; j < base_number_sq; ++j) {
-                            if(check_bit(number_columns_masks[k], j)) {
-                                single_column_j = j;
-                                set_bit(&column_numbers_masks[j], k);
-                                progress = true;
-                                fprintf(stderr, "Skreslamy %d w kolumnie %d\n", k+1, j+1);
-                            }
-                        }
-                    }
-                    if(single_column && single_row) { // liczba jest dozwolona tylko w jedym polu: koniec
-                        *hint_y = single_row_i;
-                        *hint_x = single_column_j;
-                        fprintf(stderr, "Droga eliminacji: %d\n\n", k+1);
-                        return k+1;
-                    } else break; // jest dozwolona tylko w jednym rzędzie lub kolumnie: kontynuujemy główną pętlę
-                }
-            }
+        hint = naked_single(sudoku, forbidden_numbers_masks, hint_y, hint_x);
+        if(hint) {
+            fprintf(stderr, "naked_single: %d (%d, %d)\n", hint, *hint_y, *hint_x);
+            return hint;
+        }
+        hint = hidden_single(sudoku, forbidden_numbers_masks, hint_y, hint_x);
+        if(hint) {
+            fprintf(stderr, "hidden_single: %d (%d, %d)\n", hint, *hint_y, *hint_x);
+            return hint;
+        }
+        unsigned new_num_pointing_pairs = pointing_pairs(sudoku, forbidden_numbers_masks);
+        fprintf(stderr, "num_pointing_pairs: %d -> %d\n", num_pointing_pairs, new_num_pointing_pairs);
+        if(new_num_pointing_pairs > num_pointing_pairs) {
+            progress = true;
+            num_pointing_pairs = new_num_pointing_pairs;
         }
     }
     return 0;
@@ -293,7 +367,7 @@ void move_pointer(Sudoku &sudoku, int dy, int dx) {
     }
 }
 
-unsigned parse_number_sequence(std::istream& is, int numbers[], unsigned max_num_numbers)
+static unsigned parse_number_sequence(std::istream& is, int numbers[], unsigned max_num_numbers)
 {
     unsigned n = max_num_numbers;
     for(int i = 0; i < max_num_numbers; ++i) {
@@ -373,5 +447,21 @@ void load_txt_file(Sudoku &sudoku, const char *filename) {
             sudoku.comments[i][j] = 0;
         }
     }
+    fclose(file);
+}
+
+void json_dump(Sudoku &sudoku, const char *filename) {
+    FILE *file = fopen(filename, "w");
+    if(!file)
+        return;
+    fprintf(file, "[");
+    for(int i=0; i<base_number_sq; ++i) {
+        for(int j=0; j<base_number_sq; ++j) {
+            unsigned u = sudoku.board[i][j];
+            fprintf(file, "%u", u);
+            fprintf(file, ",");
+        }
+    }
+    fprintf(file, "]");
     fclose(file);
 }

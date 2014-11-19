@@ -77,7 +77,10 @@ static void load_file_dialog(Sudoku &sudoku) {
     read_filename(filename, sizeof(filename),
                   "Uwaga! Wczytanie pliku zaskutkuje utratą niezapisanych danych\n"
                   "Podaj nazwę pliku wejściowego:\n");
-    load_xml_file(sudoku, filename);
+    char *dot = strrchr(filename, '.');
+    if (dot && !strcmp(dot, ".txt"))
+        load_txt_file(sudoku, filename);
+    else load_xml_file(sudoku, filename);
 }
 
 static void save_file_dialog(const Sudoku &sudoku) {
@@ -222,6 +225,9 @@ void ncurses_gui_loop() {
                 break;
             case 'z':
                 load_txt_file(sudoku, "hard/1.txt");
+                break;
+            case 'j':
+                json_dump(sudoku, "board.json");
                 break;
             case 's':
                 save_file_dialog(sudoku);

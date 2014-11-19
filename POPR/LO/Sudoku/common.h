@@ -37,6 +37,15 @@ inline bool has_single_bit(T n) {
     return n && !(n & (n - 1));
 }
 
+inline unsigned lsb_bit_index(unsigned n) {
+    //return __builtin_ffs(n)-1;
+    for(int i = 0; i < sizeof(n)*8; ++i) {
+        if(n & 1<<i)
+            return i;
+    }
+    return ~0;
+}
+
 inline float clamp(int n, int lower, int upper) {
     return std::max(lower, std::min(n, upper));
 }
