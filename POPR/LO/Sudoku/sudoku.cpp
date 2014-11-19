@@ -2,6 +2,7 @@
 #include "xml.h"
 #include <stdio.h>
 #include <cstdlib>
+#include <chrono>
 #include <fstream>
 
 static void square_coords(unsigned y, unsigned x, unsigned *square_y, unsigned *square_x) {
@@ -196,7 +197,42 @@ static unsigned pointing_pairs(const Sudoku &sudoku, unsigned forbidden_numbers_
     return num_pointing_pairs;
 }
 
+static const unsigned max_brute_force_iterations = 512000;
+
+bool brute_force(Sudoku &sudoku, unsigned *num_iterations, unsigned *hint, unsigned *hint_y, unsigned *hint_x) {
+    if(++*num_iterations > max_brute_force_iterations)
+        return false;
+    int y = -1, x = -1;
+    for(int i = 0; i < base_number_sq && y < 0; ++i) {
+        for(int j = 0; j < base_number_sq && y < 0; ++j) {
+            if(!sudoku.board[i][j]) {
+                y = i, x = j;
+            }
+        }
+    }
+    if(y < 0) {
+        return true;
+    }
+    unsigned mask = possible_numbers(sudoku, y, x), tmp;
+    for(int k = 0; k < base_number_sq; ++k) {
+        if(check_bit(mask, k) && !creates_conflict(sudoku, y, x, k+1, &tmp, &tmp)) {
+            unsigned old = sudoku.board[y][x];
+            sudoku.board[y][x] = k+1;
+            bool success = brute_force(sudoku, num_iterations, hint, hint_y, hint_x);
+            sudoku.board[y][x] = old;
+            if(success) {
+                *hint_y = y;
+                *hint_x = x;
+                *hint = k+1;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 unsigned hint(Sudoku &sudoku, unsigned *hint_y, unsigned *hint_x) {
+    fprintf(stderr, "hint begin\n\n");
     unsigned forbidden_numbers_masks[base_number_sq][base_number_sq] = {{0}};
     
     // na wstępie: zaznaczamy wpływ już wypełnionych pól
@@ -226,12 +262,12 @@ unsigned hint(Sudoku &sudoku, unsigned *hint_y, unsigned *hint_x) {
         progress = false;
         hint = naked_single(sudoku, forbidden_numbers_masks, hint_y, hint_x);
         if(hint) {
-            fprintf(stderr, "naked_single: %d (%d, %d)\n", hint, *hint_y, *hint_x);
+            fprintf(stderr, "naked_single: %d (%d, %d)\n\n", hint, *hint_y, *hint_x);
             return hint;
         }
         hint = hidden_single(sudoku, forbidden_numbers_masks, hint_y, hint_x);
         if(hint) {
-            fprintf(stderr, "hidden_single: %d (%d, %d)\n", hint, *hint_y, *hint_x);
+            fprintf(stderr, "hidden_single: %d (%d, %d)\n\n", hint, *hint_y, *hint_x);
             return hint;
         }
         unsigned new_num_pointing_pairs = pointing_pairs(sudoku, forbidden_numbers_masks);
@@ -241,6 +277,19 @@ unsigned hint(Sudoku &sudoku, unsigned *hint_y, unsigned *hint_x) {
             num_pointing_pairs = new_num_pointing_pairs;
         }
     }
+    
+    unsigned num_iterations = 0;
+    auto start_time = std::chrono::high_resolution_clock::now();
+    bool success = brute_force(sudoku, &num_iterations, &hint, hint_y, hint_x);
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+    fprintf(stderr, "brute_forced: %d (num_iterations: %d, time: %d ms)\n\n", hint, num_iterations, (unsigned)ms);
+    if(success) {
+        if(num_iterations > 1)
+            return hint;
+    }
+    
+    fprintf(stderr, "hint failed\n\n");
     return 0;
 }
 
