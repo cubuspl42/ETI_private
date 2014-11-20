@@ -17,8 +17,8 @@ set(SOURCES
 )
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-
-find_package( Curses REQUIRED)
+set(CURSES_NEED_WIDE TRUE)
+find_package(Curses REQUIRED)
 include_directories(${CURSES_INCLUDE_DIR})
 link_directories(${CURSES_LIBRARY_DIRS})
 

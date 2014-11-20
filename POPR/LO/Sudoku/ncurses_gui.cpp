@@ -4,6 +4,7 @@
 #include <limits.h>
 #include <locale.h>
 #include <stdlib.h>
+#include <string.h>
 
 const unsigned timeout_value = 500;
 const unsigned header_y = 0;

@@ -15,6 +15,7 @@ void reset_sudoku(Sudoku &sudoku) {
     sudoku.last_action = sudoku.undo_stack.end();
     sudoku.num_actions = 0;
     sudoku.flags = 0;
+    sudoku.active_state_index = 0;
     for(int i=0; i<base_number_sq; ++i) {
         for(int j=0; j<base_number_sq; ++j) {
             sudoku.board[i][j] = sudoku.comments[i][j] = 0;
@@ -140,14 +141,14 @@ static unsigned hidden_single(const Sudoku &sudoku, const unsigned forbidden_num
         for(int i = 0; i < base_number_sq; ++i) {
             if(row_data[k][i].num_candidates == 1) {
                 *hint_y = i, *hint_x = row_data[k][i].index;
-                fprintf(stderr, "hidden_single: row %d (candidates: %d)\n", i, row_data[k][i].num_candidates);
+                fprintf(stderr, "hidden_single: row %d\n", i);
                 return k+1;
             }
         }
         for(int j = 0; j < base_number_sq; ++j) {
             if(column_data[k][j].num_candidates == 1) {
                 *hint_y = column_data[k][j].index, *hint_x = j;
-                fprintf(stderr, "hidden_single: column %d (candidates: %d)\n", j, column_data[k][j].num_candidates);
+                fprintf(stderr, "hidden_single: column %d\n", j);
                 return k+1;
             }
         }
@@ -197,17 +198,17 @@ static unsigned pointing_pairs(const Sudoku &sudoku, unsigned forbidden_numbers_
     return num_pointing_pairs;
 }
 
-static const unsigned max_brute_force_iterations = 512000;
+static const unsigned max_brute_force_iterations = 2*1024*1024;
 
 bool brute_force(Sudoku &sudoku, unsigned *num_iterations, unsigned *hint, unsigned *hint_y, unsigned *hint_x) {
-    if(++*num_iterations > max_brute_force_iterations)
+    if(*num_iterations > max_brute_force_iterations)
         return false;
+    ++*num_iterations;
     int y = -1, x = -1;
     for(int i = 0; i < base_number_sq && y < 0; ++i) {
         for(int j = 0; j < base_number_sq && y < 0; ++j) {
-            if(!sudoku.board[i][j]) {
+            if(!sudoku.board[i][j])
                 y = i, x = j;
-            }
         }
     }
     if(y < 0) {
@@ -447,9 +448,11 @@ static unsigned parse_number_sequence(std::istream& is, int numbers[], unsigned 
 
 void load_xml_file(Sudoku &sudoku, const char *filename)
 {
-    auto active_action = sudoku.undo_stack.end();
-    reset_sudoku(sudoku);
     std::ifstream is(filename);
+    if(!is.good())
+        return;
+    reset_sudoku(sudoku);
+    auto active_action = sudoku.undo_stack.end();
     expect_valid_declaration(is);
     AttrMap attrs;
     parse_start_tag(is, "sudoku", attrs);
@@ -544,7 +547,6 @@ static void write_state(std::ostream &os, uint8_t board[base_number_sq][base_num
     }
     write_indentation(os, 1);
     os << "</state>\n";
-    os << "</sudoku>\n";
 }
 
 void save_xml_file(Sudoku &sudoku, const char *filename)
@@ -566,13 +568,14 @@ void save_xml_file(Sudoku &sudoku, const char *filename)
         }
         write_state(os, board, comments, ++state_nr);
     } while(iter != sudoku.undo_stack.begin());
+    os << "</sudoku>\n";
 }
 
 void load_txt_file(Sudoku &sudoku, const char *filename) {
-    reset_sudoku(sudoku);
     FILE *file = fopen(filename, "r");
     if(!file)
         return;
+    reset_sudoku(sudoku);
     for(int i=0; i<base_number_sq; ++i) {
         for(int j=0; j<base_number_sq; ++j) {
             unsigned u = 0;
