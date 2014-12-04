@@ -1,0 +1,175 @@
+﻿stałe:
+SUDOKU_POSITION_X
+SUDOKU_POSITION_Y
+TIMER_POSITION_X, Y...
+...
+
+ODSTĘP_POZIOMY_MIĘDZY_LICZBAMI 5
+ODSTĘP_PIONOWY_MIĘDZY_LICZBAMI 2
+WCIECIE_PRZED_PIERWSZA_LICZBA_W_POZIOMIE 2
+WCIECIE_PRZED_PIERWSZA_LICZBA_W_PIONIE 1
+
+szablon planszy:
+const string szablon_planszy[] = {
+("╔════╤════╤════╦════╤════╤════╦════╤════╤════╗"),
+("║    │    │    ║    │    │    ║    │    │    ║"),
+("╟────┼────┼────╫────┼────┼────╫────┼────┼────╢"),
+("║    │    │    ║    │    │    ║    │    │    ║"),
+("╟────┼────┼────╫────┼────┼────╫────┼────┼────╢"),
+("║    │    │    ║    │    │    ║    │    │    ║"),
+("╠════╪════╪════╬════╪════╪════╬════╪════╪════╣"),
+("║    │    │    ║    │    │    ║    │    │    ║"),
+("╟────┼────┼────╫────┼────┼────╫────┼────┼────╢"),
+("║    │    │    ║    │    │    ║    │    │    ║"),
+("╟────┼────┼────╫────┼────┼────╫────┼────┼────╢"),
+("║    │    │    ║    │    │    ║    │    │    ║"),
+("╠════╪════╪════╬════╪════╪════╬════╪════╪════╣"),
+("║    │    │    ║    │    │    ║    │    │    ║"),
+("╟────┼────┼────╫────┼────┼────╫────┼────┼────╢"),
+("║    │    │    ║    │    │    ║    │    │    ║"),
+("╟────┼────┼────╫────┼────┼────╫────┼────┼────╢"),
+("║    │    │    ║    │    │    ║    │    │    ║"),
+("╚════╧════╧════╩════╧════╧════╩════╧════╧════╝")
+};
+
+funkcje:
+
+rysujWiersz(int x, int y, const char *wiersz)
+  gotoxy(x, y);
+  wypisz wiersz na ekran...
+
+printSudoku(int sudoku[9][9], int zaznaczonyElement <jaki numer jest teraz zaznaczony?>, kursor_i, kursor_j,
+  podpowiedz_i, podpowiedz_j, podpowiedz_liczba);
+  na pozycji (SUDOKU_X, SUDOKU_Y) dla każdego wiersza z szablonu, wypisz go (patrz -----> rysujWiersz)
+
+  y = SUDOKU_Y + WCIECIE_PRZED_PIERWSZA_LICZBA_W_PIONIE
+  for i in [0, 9):
+    x = SUDOKU_X + WCIECIE_PRZED_PIERWSZA_LICZBA_W_POZIOMIE
+    for j in [0, 9]
+      jesli liczba == podpowiedz_liczba:
+        wypisz podpowiedz_liczba na pozycji (x, y)
+        przykładowa forma:
+
+
+╔════╤════╤════╦════╤════╤════╦════╤════╤════╗
+║    │ 1  │ 2  ║{3}?│ 4  │ 5  ║ 6  │    │    ║
+╟────┼────┼────╫────┼────┼────╫────┼────┼────╢
+
+
+      else: (jesli to nie jest podpowiedz_liczba)
+        jesli liczba sudoku[i][j] to zero:
+          nie wypisuj
+        w innym przypadku:
+          wypisz tę liczbę na pozycji (x, y)
+
+        jesli liczba == zaznaczonyElement
+          na pozycji (x+2, y) wypisz '*' (za to jest 0.5 pkt ;))
+
+      x += ODSTĘP_POZIOMY_MIĘDZY_LICZBAMI <--- w wewnetrznej petli
+    y += ODSTĘP_PIONOWY_MIĘDZY_LICZBAMI <--- w zewnetrznej
+
+// jestesmy bardzo leniwi i marnujemy w tym pseudokodzie pierwszy slot tablicy (indeks zero)
+ liczbyPowodujaceKonflit(bool tab[10], i, j)
+  dla kazdej liczby w podkwadracie, do ktorego nalezy (i, j):
+                            <ćwczenie: jak wyznaczyć ktory to podkwadrat? jak zrobic po nim petle?>
+    tab[liczba] = true
+  dla kazdej liczby w wierszu `i`, jesli to nie zero:
+    tab[liczba] = true
+  dla kazdej liczby w wierszu `j`, jesli to nie zero:
+    tab[liczba] = true
+
+
+wstawLiczbe(int sudoku[9][9], i, j, liczba, wskaźnik na licznik)
+  jesli sudoku[i][j] == liczba:
+    return
+  jesli powoduje konflikt: (patrz ---> liczbyPowodujaceKonflit)
+    return
+  sudoku[i][j] = liczba
+  ++*licznik
+
+usunLiczbe(int sudoku[9][9], i, j, wskaźnik na licznik):
+  jesli sudoku[i][j] == 0: <cały czas zakładamy ze zero to brak liczby>
+    return
+  sudoku[i][j] = 0
+  ++*licznik
+
+wypiszHelp:
+  na danej pozycji wypisz kilka linijek pomocy, to jest proste (--> rysujWiersz)
+
+wypiszMozliwosci(konflikty[10]):
+  dla kazdego i w [1, 9]:
+    if konflikty[i] == false:
+      wypisz i (nie uwzgledniam tu formy)
+
+  przykladowa forma:
+      `Mozliwe liczby na tym polu: <1, 2, 3, 4>` <cwiczenie: jak to wypisac zeby tak wygladalo?>
+
+dygresja: jak zwrocic kilka wartosci?
+opcja a) funkcja zwraca strukture kilku elementow
+b) "zwraca" wszystko przez wskazniki
+powiedzmy ze ten pseudokod zaklada, ze a) jest lepsze
+
+podpowiedz(int sudoku[9][9], i, j, liczba)
+  dla kazdego pola (i, j) w sudoku:
+    konflikty (tablica 10 booli) patrz ----> liczbyPowodujaceKonflit
+    ileKonfliktow = 0
+    podpowiedz_liczba = -1
+    for k in [1, 9]:
+      jesli konflity[k] == true:
+        ileKonfliktow++
+      else:
+        podpowiedz_liczba = k
+    ileMozliwosci = 9 - ileKonfliktow
+    if ileMozliwosci = 1:
+      struktura zwracana;
+      zwracana.podpowiedz_i = i
+      zwracana.podpowiedz_j = j
+      zwracana.podpowiedz_liczba = j
+      return zwracana
+
+funkcja main:
+
+  zmienne prawie globalne:
+  kursor_i = 0     [0, 9)
+  kursor_j = 0      [0, 9)
+  podpowiedz_i = -1, podpowiedz_j = -1, podpowiedz_liczba = -1 (-1 czyli nic)
+  sudoku[9][9]
+  licznik
+
+  time_t czas = time(null);
+  pętla: <zakładamy ze to prymitywna petla rysujaca raz na wcisniecie klawisza, nie czesciej>
+    zmienne lokalne dla petli:
+
+      zaznaczonyElement = -1
+
+      bool konflikty[10];
+      bool wypiszMozliweLiczby = false
+
+    bool potrzeba_potwierdzenia_podpowiedzi = (podpowiedz_liczba != -1)
+    obsługa wejscia
+    znak = wczytaj znak
+    jestli potrzeba_potwierdzenia_podpowiedzi:
+      nie wiem czym chcesz potwierdac podpowiedz... moze Enter?
+      jesli znak to Enter:
+        podpowiedz_liczba wstawiamy w miejsce podpowiedz_i, podpowiedz_j     patrz ---> wstawLiczbe
+      jesli inny: podpowiedz_liczba = -1
+    w innym przypadku obslugujemy (np. uzuwajac switcha lub ifow) cala game znakow:
+      1..9: wstawLiczbe <--- sudoku,  kursor_i, kursor_j, liczba <cwiczenie: jak znak liczby (char) zmienic w liczbe (int)?>
+      del: usunLiczbe <--- sudoku, kursor_i, kursor_j
+      p: podpowiedz ---->   podpowiedz_i, podpowiedz_j, podpowiedz_liczba
+      l: wypiszMozliweLiczby
+      ... i inne, analogicznie.
+
+
+    rysujemy wszytko w oparciu o zmienne prawie globalne
+    a jesli chodzi o zmienne lokalne:
+      zaznaczonyElement przekazujemy do -----> printSudoku
+
+    wypisujemy licznik i czas
+    czas jest bardziej "tricky":
+    time_t czas_teraz = time(null);
+    roznice w czasie wyliczamy standardowa funkcja difftime
+    zwraca double'a ktorego zapisujemy w incie (nie obchodza nas ulamki sekund ktore i tak chyba nie sa nawet obslugiwane)
+    <cwiczenie: jak wypisac to ladnie w formie "MINUTY:SEKUNDY"?> (std::stringstream (C++), lub sprintf (C))
+
+  koniec petli
