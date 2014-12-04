@@ -1,4 +1,8 @@
 build/
+Debug/
+*.opensdf
+*.sdf
+*.suo
 
 # Compiled Object files
 *.slo
