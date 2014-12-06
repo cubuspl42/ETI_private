@@ -100,11 +100,12 @@ UndoableMove* doMove(UndoableMove *mostRecentMove, int sudoku[GRID_WIDTH][GRID_W
             int i, int j, int numberBefore, int numberAfter, int changedComment)
 {
     // Usunięcie "ogona" listy
-    UndoableMove *move = mostRecentMove;
+    UndoableMove *move = mostRecentMove->next;
+    mostRecentMove->next = NULL;
     while(move) {
-		free(move->next);
-		move->next = NULL;
-		move = move->next;
+        UndoableMove *move_ = move;
+        move = move->next;
+		free(move_);
     }
     
     appendUndoableMove(mostRecentMove, i, j, numberBefore, numberAfter, changedComment);
