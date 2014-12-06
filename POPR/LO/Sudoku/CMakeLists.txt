@@ -5,6 +5,7 @@ project(Sudoku)
 set(SOURCES
     config.h
     common.h
+    algorithm.h
     list.h
     map.h
     xml.h

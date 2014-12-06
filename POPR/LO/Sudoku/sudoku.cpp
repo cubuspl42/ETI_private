@@ -1,4 +1,5 @@
 #include "sudoku.h"
+#include "algorithm.h"
 #include "xml.h"
 #include <stdio.h>
 #include <cstdlib>
@@ -449,26 +450,24 @@ static unsigned parse_number_sequence(std::istream& is, int numbers[], unsigned 
 
 void load_xml_file(Sudoku &sudoku, const char *filename)
 {
+    list<State> states;
     std::ifstream is(filename);
     if(!is.good())
         return;
     reset_sudoku(sudoku);
-    auto active_action = sudoku.undo_stack.end();
+    
     expect_valid_declaration(is);
     AttrMap attrs;
     parse_start_tag(is, "sudoku", attrs);
     int active_state = atoi(attrs["active-state"].c_str());
     attrs.clear();
     while(try_parse_start_tag(is, "state", attrs)) {
-        int curent_state = atoi(attrs["nr"].c_str());
+        State state;
+        state.nr = atoi(attrs["nr"].c_str());
         attrs.clear();
         parse_start_tag(is, "board", attrs);
-        int board_numbers[base_number_sq*base_number_sq];
-        unsigned n = parse_number_sequence(is, board_numbers, base_number_sq*base_number_sq);
-        for(int k = 0; k < n; ++k) {
-            int i = k/base_number_sq, j = k%base_number_sq;
-            put_number(sudoku, i, j, board_numbers[k]);
-        }
+        parse_number_sequence(is, state.board_numbers, base_number_sq*base_number_sq);
+
         parse_end_tag(is, "board");
         if(try_parse_start_tag(is, "comments", attrs)) {
             while(try_parse_start_tag(is, "comment", attrs)) {
@@ -476,27 +475,44 @@ void load_xml_file(Sudoku &sudoku, const char *filename)
                 int j = atoi(attrs["col"].c_str()) - 1;
                 attrs.clear();
                 int comment_numbers[base_number_sq];
-                unsigned mask = 0, xor_mask = 0;
                 unsigned n = parse_number_sequence(is, comment_numbers, base_number_sq);
                 for(unsigned k = 0; k < n; ++k) {
                     unsigned c = comment_numbers[k];
                     if(c)
-                        set_bit(&mask, c-1);
-                }
-                xor_mask = mask ^ sudoku.comments[i][j];
-                for(unsigned k = 0; k < base_number_sq; ++k) {
-                    if(check_bit(xor_mask, k))
-                        flip_comment(sudoku, i, j, k+1);
+                        set_bit(&state.comments[i][j], c-1);
                 }
                 parse_end_tag(is, "comment");
             }
             parse_end_tag(is, "comments");
         }
         parse_end_tag(is, "state");
-        if(active_state == curent_state)
-            active_action = sudoku.undo_stack.begin();
+        states.push_back(state);
     }
     parse_end_tag(is, "sudoku");
+
+    sort(states.begin(), states.end(), [](const State &s1, const State &s2){
+        return s1.nr < s2.nr;
+    });
+    
+    auto active_action = sudoku.undo_stack.end();
+    for(const State &state : states) {
+        for(int k = 0; k < base_number_sq*base_number_sq; ++k) {
+            int i = k/base_number_sq, j = k%base_number_sq;
+            put_number(sudoku, i, j, state.board_numbers[k]);
+        }
+        for(int i = 0; i < base_number_sq; ++i) {
+            for(int j = 0; j < base_number_sq; ++j) {
+                unsigned xor_mask = sudoku.comments[i][j] ^ state.comments[i][j];
+                for(int k = 0; k < base_number_sq; ++k) {
+                    if(check_bit(xor_mask, k)) {
+                        flip_comment(sudoku, i, j, k+1);
+                    }
+                }
+            }
+        }
+        if(state.nr == active_state)
+            active_action = sudoku.undo_stack.begin();
+    }
     if(active_action != sudoku.undo_stack.end()) {
         while(sudoku.last_action != active_action)
             undo(sudoku);

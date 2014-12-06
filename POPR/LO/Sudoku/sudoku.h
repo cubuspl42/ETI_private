@@ -9,6 +9,12 @@ const unsigned base_number = 3;
 const unsigned base_number_sq = base_number*base_number;
 const unsigned base_mask = (1<<base_number_sq)-1;
 
+struct State {
+    int nr = 0;
+    int board_numbers[base_number_sq*base_number_sq] = {0};
+    uint16_t comments[base_number_sq][base_number_sq] = {{0}};
+};
+
 struct Action {
     bool is_comment = false;
     uint8_t y = 0, x = 0;
