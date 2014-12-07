@@ -448,6 +448,26 @@ static unsigned parse_number_sequence(std::istream& is, int numbers[], unsigned 
     return n;
 }
 
+static void try_load_comments(State &state, AttrMap &attrs, std::ifstream &is) {
+    attrs.clear();
+    if(try_parse_start_tag(is, "comments", attrs)) {
+        while(try_parse_start_tag(is, "comment", attrs)) {
+            int i = atoi(attrs["row"].c_str()) - 1;
+            int j = atoi(attrs["col"].c_str()) - 1;
+            attrs.clear();
+            int comment_numbers[base_number_sq];
+            unsigned n = parse_number_sequence(is, comment_numbers, base_number_sq);
+            for(unsigned k = 0; k < n; ++k) {
+                unsigned c = comment_numbers[k];
+                if(c)
+                    set_bit(&state.comments[i][j], c-1);
+            }
+            parse_end_tag(is, "comment");
+        }
+        parse_end_tag(is, "comments");
+    }
+}
+
 void load_xml_file(Sudoku &sudoku, const char *filename)
 {
     ktl::list<State> states;
@@ -464,27 +484,16 @@ void load_xml_file(Sudoku &sudoku, const char *filename)
     while(try_parse_start_tag(is, "state", attrs)) {
         State state;
         state.nr = atoi(attrs["nr"].c_str());
+        
+        try_load_comments(state, attrs, is);
+        
         attrs.clear();
         parse_start_tag(is, "board", attrs);
         parse_number_sequence(is, state.board_numbers, base_number_sq*base_number_sq);
-
         parse_end_tag(is, "board");
-        if(try_parse_start_tag(is, "comments", attrs)) {
-            while(try_parse_start_tag(is, "comment", attrs)) {
-                int i = atoi(attrs["row"].c_str()) - 1;
-                int j = atoi(attrs["col"].c_str()) - 1;
-                attrs.clear();
-                int comment_numbers[base_number_sq];
-                unsigned n = parse_number_sequence(is, comment_numbers, base_number_sq);
-                for(unsigned k = 0; k < n; ++k) {
-                    unsigned c = comment_numbers[k];
-                    if(c)
-                        set_bit(&state.comments[i][j], c-1);
-                }
-                parse_end_tag(is, "comment");
-            }
-            parse_end_tag(is, "comments");
-        }
+        
+        try_load_comments(state, attrs, is);
+        
         parse_end_tag(is, "state");
         states.push_back(state);
     }
@@ -549,7 +558,7 @@ static void write_state(std::ostream &os, uint8_t board[base_number_sq][base_num
                 unsigned c = comments[i][j];
                 if(c) {
                     write_indentation(os, 3);
-                    os << "<comment row=\"" << i << "\" col=\"" << j << "\">";
+                    os << "<comment row=\"" << i+1 << "\" col=\"" << j+1 << "\">";
                     for(int k = 0; k < base_number_sq; ++k) {
                         if(check_bit(c, k)) {
                             os << k+1 << ' ';
