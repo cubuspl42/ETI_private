@@ -3,6 +3,8 @@
 
 #include <cassert>
 
+namespace ktl {
+
 template<typename T>
 class list {
     struct node;
@@ -84,5 +86,7 @@ public:
         delete kill_me;
     }
 };
+    
+}
 
 #endif

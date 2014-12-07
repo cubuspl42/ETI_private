@@ -450,7 +450,7 @@ static unsigned parse_number_sequence(std::istream& is, int numbers[], unsigned 
 
 void load_xml_file(Sudoku &sudoku, const char *filename)
 {
-    list<State> states;
+    ktl::list<State> states;
     std::ifstream is(filename);
     if(!is.good())
         return;

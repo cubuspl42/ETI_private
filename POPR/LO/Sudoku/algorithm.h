@@ -1,6 +1,8 @@
 #ifndef ALGORITHM_H
 #define ALGORITHM_H
 
+namespace ktl {
+
 template <class Iterator, class Compare>
 void bubble_sort(Iterator begin, Iterator end, Compare comp) {
     Iterator last = end;
@@ -22,6 +24,19 @@ void bubble_sort(Iterator begin, Iterator end, Compare comp) {
 template<typename Iterator, class Compare>
 void sort(Iterator begin, Iterator end, Compare comp) {
     bubble_sort(begin, end, comp);
+}
+
+template <class Iterator, class T>
+Iterator find(Iterator first, Iterator last, const T& value)
+{
+    while(first != last) {
+        if (*first == value)
+            break;
+        ++first;
+    }
+    return first;
+}
+    
 }
 
 #endif

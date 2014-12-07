@@ -49,8 +49,8 @@ struct Sudoku {
     uint8_t highlighted_number = 0;
     uint16_t possibilities = 0;
     uint8_t hint_y = 0, hint_x = 0, hint_number = 0;
-    list<Action> undo_stack;
-    list<Action>::iterator last_action;
+    ktl::list<Action> undo_stack;
+    ktl::list<Action>::iterator last_action;
     unsigned active_state_index = 0;
     unsigned num_actions = 0;
 };

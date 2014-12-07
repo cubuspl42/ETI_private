@@ -2,8 +2,10 @@
 #define map_h
 
 #include <cassert>
-#include <algorithm>
+#include "algorithm.h"
 
+namespace ktl {
+    
 template<typename K, typename V, unsigned max_size>
 class map {
     K keys[max_size];
@@ -15,7 +17,7 @@ public:
     }
     V &at(const K &key) {
         K *end = keys+size;
-        unsigned i = std::find(std::begin(keys), end, key) - keys;
+        unsigned i = ktl::find(keys, end, key) - keys;
         if(i == size) {
             assert(size < max_size);
             keys[size++] = key;
@@ -26,5 +28,7 @@ public:
         return at(key);
     }
 };
+    
+}
 
 #endif
