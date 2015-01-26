@@ -1,138 +1,68 @@
 // -*- coding: utf-8 -*-
+#include "vector2.h"
+
 #include <SDL.h>
 #include <SDL_main.h>
+#include <SDL_image.h>
 
+#include <algorithm>
 #include <cassert>
+#include <cstdlib>
+#include <fstream>
 #include <initializer_list>
+#include <iostream>
+#include <memory>
+#include <sstream>
 #include <vector>
 
-#define _USE_MATH_DEFINES // MSVC <3
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
 
-#define SCREEN_WIDTH	480
-#define SCREEN_HEIGHT   640
+using namespace std;
 
-class range {
-    class iterator {
-    public:
-        explicit iterator(unsigned i_) : i(i_) {}
-        inline void operator++() { ++i; }
-        inline unsigned operator*() { return i; };
-        inline bool operator!=(const iterator &it) { return i != it.i; }
-    private:
-        unsigned i;
-    };
-public:
-    explicit range(unsigned n_) : n(n_) {}
-    inline iterator begin() { return iterator(0); }
-    inline iterator end() { return iterator(n); }
-private:
-    unsigned n;
-};
-
-struct Vector2D
-{
-    float x;
-    float y;
-    Vector2D(float x_=0, float y_=0)
-    : x(x_), y(y_) {}
-    Vector2D& set(int x_, int y_) {
-        x = x_;
-        y = y_;
-        return (*this);
-    }
-    float& operator [](size_t i) {
-        static_assert((offsetof(Vector2D, y)-offsetof(Vector2D, x))==sizeof(float), "Offset mismatch");
-        return ((&x)[i]);
-    }
-    float operator [](size_t i) const {
-        return ((&x)[i]);
-    }
-    Vector2D& operator +=(const Vector2D& v) {
-        x += v.x;
-        y += v.y;
-        return (*this);
-    }
-    Vector2D& operator -=(const Vector2D& v) {
-        x -= v.x;
-        y -= v.y;
-        return (*this);
-    }
-    Vector2D& operator *=(int t) {
-        x *= t;
-        y *= t;
-        return (*this);
-    }
-    Vector2D operator -(void) const {
-        return (Vector2D(-x, -y));
-    }
-    Vector2D operator +(const Vector2D& v) const {
-        return (Vector2D(x+v.x, y+v.y));
-    }
-    Vector2D operator -(const Vector2D& v) const {
-        return (Vector2D(x-v.x, y-v.y));
-    }
-    Vector2D operator *(int t) const {
-        return (Vector2D(x*t, y*t));
-    }
-    Vector2D operator /(int t) const {
-        return (Vector2D(x*1.0f/t, y*1.0f/t));
-    }
-    int operator *(const Vector2D& v) const {
-        return (x*v.x+y*v.y);
-    }
-    bool operator ==(const Vector2D& v) const {
-        return ((x == v.x) && (y == v.y));
-    }
-    bool operator !=(const Vector2D& v) const {
-        return ((x != v.x) || (y != v.y));
-    }
-    int lengthsq() {
-        return x*x+y*y;
-    }
-    double length() {
-        return sqrt(lengthsq());
-    }
-    Vector2D normalized(void) {
-        return (*this) / length();
-    }
-};
-
-struct AABB {
-    Vector2D position, box;
-    inline float top() const {
-        return position.y;
-    }
-    inline float bottom() const {
-        return position.y+box.y;
-    }
-    inline float left() const {
-        return position.x;
-    }
-    inline float right() const {
-        return position.x+box.x;
-    }
-    SDL_Rect rect() {
-        SDL_Rect r;
-        r.x = position.x;
-        r.y = position.y;
-        r.w = box.x;
-        r.h = box.y;
-        return r;
-    }
-};
-
-bool aabbs_overlap(Vector2D pos1, Vector2D box1,
-                   Vector2D pos2, Vector2D box2)
-{
-    return  pos2.x < pos1.x+box1.x && pos2.x+box2.x > pos1.x &&
-            pos2.y < pos1.y+box1.y && pos2.y+box2.y > pos1.y;
-}
+constexpr unsigned screen_width = 480;
+constexpr unsigned screen_height = 640;
+constexpr size_t bricks_per_column = 16;
+constexpr size_t bricks_per_line = 13;
+constexpr float brick_width = 34;
+constexpr float brick_height = 18;
+constexpr unsigned hud_height = 64;
+constexpr unsigned edge_width = 19;
+constexpr unsigned gameplay_area_offset_x = edge_width;
+constexpr unsigned gameplay_area_offset_y = hud_height + edge_width;
+constexpr unsigned gameplay_area_width = bricks_per_line * brick_width;
+constexpr unsigned gameplay_area_height = screen_height - gameplay_area_offset_y;
+constexpr size_t max_num_balls = 3;
+constexpr float ball_box_width = 10;
+constexpr float ball_box_height = 10;
+constexpr float ball_texture_width = 12;
+constexpr float ball_texture_height = 12;
+constexpr float ball_base_speed = 3;
+constexpr float ball_max_speed = 6;
+constexpr float ball_time_to_reach_max_speed = 20;
+constexpr float paddle_y = 512;
+constexpr float paddle_velocity = 6;
+constexpr float base_paddle_width = 70;
+constexpr float extended_paddle_width = 140;
+constexpr float paddle_height = 18;
+constexpr float bonus_duration = 20;
+constexpr size_t num_bricks_types = 4;
+constexpr unsigned lives_left_x = 32;
+constexpr unsigned lives_left_y = screen_height - ball_texture_height - 8;
+constexpr unsigned pickup_spawn_chance_inv = 8;
+constexpr size_t max_num_pickups = 16;
+constexpr unsigned pickup_width = 32;
+constexpr unsigned pickup_height = 32;
+constexpr float pickup_velocity = 3;
+constexpr unsigned highscores_x = 150;
+constexpr unsigned highscores_y = 200;
+constexpr unsigned score_bonus = 100;
+constexpr unsigned score_x = 190;
+constexpr unsigned score_y = 25;
 
 enum State {
-    GAMEPLAY_STATE,
+    Game_STATE,
     PAUSED_STATE,
     GAME_OVER_STATE,
     LEVEL_END_STATE
@@ -145,382 +75,577 @@ enum BonusType {
     EXTRA_LIFE_BONUS,
     WIDER_PADDLE_BONUS,
     THREE_BALLS_BONUS,
-    SHOOTING_PADDLE_BONUS
+    SHOOTING_PADDLE_BONUS,
+    NUM_BONUS_TYPES
 };
 
-constexpr unsigned gameplay_area_width = 480;
-constexpr unsigned gameplay_area_height = 640;
-constexpr size_t bricks_per_column = 16;
-constexpr size_t bricks_per_line = 13;
-constexpr float brick_width = 32;
-constexpr float brick_height = 16;
-constexpr size_t max_num_bricks = bricks_per_column*bricks_per_line;
-constexpr size_t max_num_balls = 3;
-constexpr float ball_box_width = 16;
-constexpr float ball_box_height = 16;
-constexpr float paddle_y = 460;
-constexpr float bonus_duration = 20;
-
-const int default_level_data[bricks_per_column][bricks_per_line] = {
-    {0,0,0,0,0,0,0,0,0,0,0,0,0},
-    {0,0,0,0,0,0,0,0,0,0,0,0,0},
-    {0,0,0,0,0,0,0,0,0,0,0,0,0},
-    {0,0,0,0,0,0,0,0,0,0,0,0,0},
-    {0,0,0,0,0,0,0,0,0,0,0,0,0},
-    {0,0,0,0,0,0,0,0,0,0,0,0,0},
-    {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
-    {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
-    {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
-    {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
-    {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
-    {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
-    {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
-    {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
-    {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
-    {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
+struct Pickup {
+    Vector2 position;
+    BonusType type;
 };
 
-struct Bricks {
-    Vector2D position[max_num_bricks];
-    unsigned type[max_num_bricks];
-    size_t count = 0;
+struct Resources {
+    SDL_Texture* background_texture;
+    SDL_Texture* ball_texture;
+    SDL_Texture* paddle_texture;
+    SDL_Texture* brick_textures[num_bricks_types];
+    SDL_Texture* pickup_textures[NUM_BONUS_TYPES];
+    SDL_Texture* gameover_texture;
+    SDL_Texture* charset_texture;
 };
 
-struct Balls {
-    Vector2D position[max_num_bricks];
-    Vector2D velocity[max_num_bricks];
-    size_t count = 1;
+struct Brick {
+    int type; // -1, 0, 1, 2, 3, ...
+    bool destroyed = false;
 };
 
-struct Gameplay {
-    unsigned score;
-    Bricks bricks;
-    Balls balls;
+struct Ball {
+    Vector2 position;
+    Vector2 velocity;
+    bool freezed = false;
+};
+
+struct Game {
+    ifstream *levels_file = nullptr;
+    std::string top_players[5];
+    unsigned top_scores[5] = {0};
+    bool give_name = false;
+    unsigned top_score_index = 0;
+    bool show_highscores = false;
+    bool gameover = false;
+    unsigned score = 0;
+    Pickup pickups[max_num_pickups];
+    unsigned pickups_count = 0;
+    Vector2 bullets[max_num_pickups];
+    unsigned bullets_count = 0;
+    Brick bricks[bricks_per_column][bricks_per_line];
+    Ball balls[max_num_balls];
+    unsigned balls_count = 0;
+    float balls_speed = 0;
+    unsigned balls_acceleration_start_time = 0;
     float paddle_x;
+    int paddle_moving_dir = 0; // -1, 0, 1
     float paddle_width;
+    unsigned lives_left = 0;
     BonusType active_bonus_type;
-    float active_bonus_time_left;
+    unsigned active_bonus_start_time;
 };
 
-// When there's collision, puts the projection vector into *out_proj and returns true.
-// If there's no collision, returns false.
-bool aabbs_collide(const AABB &a, const AABB& b)
-{
-    return  b.top() < a.bottom() && b.bottom() > a.top() &&
-            b.left() < a.right() && b.right() > a.left();
-}
-
-void resolve_collision(Vector2D proj, Vector2D *pos, Vector2D *velocity)
-{
-    assert(proj.x*proj.y == 0 && proj.x+proj.y != 0);
-    *pos += proj;
-    if(proj.y == 0)
-        velocity->x *= -1;
-    else if(proj.x == 0)
-        velocity->y *= -1;
-}
-
-void handle_wall_collisions(AABB *aabb, Vector2D *velocity)
-{
-    if((aabb->left() < 0 && velocity->x < 0) ||
-       (aabb->right() >= gameplay_area_width && velocity->x > 0))
-        velocity->x *= -1;
-    if((aabb->top() < 0 && velocity->y < 0) ||
-       (aabb->bottom() >= gameplay_area_height && velocity->y > 0))
-        velocity->y *= -1;
-}
-
-void handle_ball_vs_brick_collision(Vector2D bricks_position[], size_t num_bricks,
-                                              Vector2D bodies_position[], size_t num_bodies,
-                                              float body_width, float body_height)
-{
-    for(auto i : range(num_bodies)) {
-        for(auto j : range(num_bricks)) {
-            i = j;
+void draw_string(SDL_Renderer *renderer, SDL_Texture *charset, unsigned x, unsigned y, const char *text) {
+    SDL_Rect s, d;
+    s.w = s.h = d.w = d.h = 8;
+    d.x = x;
+    d.y = y;
+    while(*text) {
+        if(*text == '\n') {
+            d.y += 8;
+            d.x = x;
+        } else {
+            s.x = (*text % 16) * 8;
+            s.y = (*text / 16) * 8;
+            SDL_RenderCopy(renderer, charset, &s, &d);
+            d.x += 8;
         }
+        ++text;
     }
 }
 
-size_t load_bricks(Vector2D position[max_num_bricks], unsigned type[max_num_bricks],
-                   const int bricks_data[bricks_per_column][bricks_per_line])
+bool aabbs_overlap(Vector2 pos1, Vector2 box1,
+                   Vector2 pos2, Vector2 box2)
 {
-    size_t count = 0;
-    for(auto y : range(bricks_per_column)) {
-        for(auto x : range(bricks_per_line)) {
-            int code = bricks_data[y][x];
-            if(code >= 0) {
-                position[count] = {x*brick_width, y*brick_height};
-                type[count] = code;
-                ++count;
+    return  pos2.x < pos1.x+box1.x && pos2.x+box2.x > pos1.x &&
+    pos2.y < pos1.y+box1.y && pos2.y+box2.y > pos1.y;
+}
+
+void init(SDL_Window **out_window, SDL_Renderer **out_renderer) {
+    assert(SDL_Init(SDL_INIT_TIMER|SDL_INIT_VIDEO) == 0);
+    assert(IMG_Init(IMG_INIT_PNG) != 0);
+    SDL_Window *window = SDL_CreateWindow("Arkanoid", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+                                          screen_width, screen_height, 0);
+    assert(window);
+    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC);
+    assert(renderer);
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
+    SDL_RenderSetLogicalSize(renderer, screen_width, screen_height);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    *out_window = window;
+    *out_renderer = renderer;
+}
+
+SDL_Texture *load_texture(SDL_Renderer *renderer, const char *filename) {
+    SDL_Surface *surface = IMG_Load(filename);
+    assert(surface);
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
+    assert(texture);
+    SDL_FreeSurface(surface);
+    return texture;
+}
+
+void load_scores(Game *game) {
+    ifstream f;
+    f.open("scores.txt");
+    for(int i = 0; i < 5; ++i) {
+        f >> game->top_players[i];
+        f >> game->top_scores[i];
+    }
+}
+
+void save_scores(Game *game) {
+    ofstream f;
+    f.open("scores.txt");
+    for(int i = 0; i < 5; ++i) {
+        f << game->top_players[i] << ' ';
+        f << game->top_scores[i] << ' ';
+    }
+}
+
+void load_resources(SDL_Renderer *renderer, Resources &res) {
+    res.background_texture = load_texture(renderer, "background.png");;
+    res.ball_texture = load_texture(renderer, "ball.png");
+    res.paddle_texture = load_texture(renderer, "paddle.png");
+    {
+        char buffer[] = "brick_A.png";
+        for(unsigned i = 0; i < num_bricks_types; ++i) {
+            buffer[sizeof(buffer)-sizeof(".png")-1] = 'A'+i;
+            res.brick_textures[i] = load_texture(renderer, buffer);
+        }
+    }
+    {
+        char buffer[] = "bonus_1.png";
+        for(unsigned i = 1; i < NUM_BONUS_TYPES; ++i) {
+            buffer[sizeof(buffer)-sizeof(".png")-1] = '0'+i;
+            res.pickup_textures[i] = load_texture(renderer, buffer);
+        }
+    }
+    res.gameover_texture = load_texture(renderer, "gameover.png");
+    res.charset_texture = load_texture(renderer, "cs8x8.bmp");
+}
+
+bool load_level(Game *game) {
+    char c;
+    unsigned y = 0, x = 0;
+    ifstream &f = *game->levels_file;
+    while(y < bricks_per_column && f >> c) {
+        if(c == '.') {
+            game->bricks[y][x].type = -1;
+            game->bricks[y][x].destroyed = true;
+        } else {
+            unsigned type = c - 'A';
+            assert(type < num_bricks_types);
+            game->bricks[y][x].type = type;
+            game->bricks[y][x].destroyed = false;
+        }
+        if(++x >= bricks_per_line)
+            x = 0, ++y;
+    }
+    
+    return (bool)f;
+}
+
+void handle_wall_collisions(Game *game)
+{
+    for(int i = 0; i < game->balls_count; ++i) {
+        Ball &ball = game->balls[i];
+        if(ball.position.x < 0)
+            ball.velocity.x = abs(ball.velocity.x);
+        if(ball.position.x + ball_box_width >= gameplay_area_width)
+            ball.velocity.x = -abs(ball.velocity.x);
+        if(ball.position.y < 0)
+            ball.velocity.y = abs(ball.velocity.y);
+//        if(ball.position.y + ball_box_height >= gameplay_area_height)
+//            ball.velocity.y = -abs(ball.velocity.y);
+    }
+}
+
+void handle_brick_collisions(Game *game)
+{
+    for(int i = 0; i < game->balls_count; ++i) {
+        Ball &ball = game->balls[i];
+        for(int y = 0; y < bricks_per_column; ++y) {
+            for(int x = 0; x < bricks_per_line; ++x) {
+                Brick &brick = game->bricks[y][x];
+                if(!brick.destroyed) {
+                    Vector2 brick_pos = {x*brick_width, y*brick_height};
+                    if(aabbs_overlap(ball.position, {ball_box_width, ball_box_height},
+                                     brick_pos, {brick_width, brick_height})) {
+                        float penetration_right = brick_pos.x + brick_width - ball.position.x;
+                        float penetration_left = ball.position.x + ball_box_width - brick_pos.x;
+                        float penetration_down = brick_pos.y + brick_height - ball.position.y;
+                        float penetration_up = ball.position.y + ball_box_height - brick_pos.y;
+                        if(min(penetration_left, penetration_right) < min(penetration_up, penetration_down)) {
+                            if(penetration_left < penetration_right)
+                                ball.velocity.x = -abs(ball.velocity.x);
+                            else ball.velocity.x = abs(ball.velocity.x);
+                        } else {
+                            if(penetration_up < penetration_down)
+                                ball.velocity.y = -abs(ball.velocity.y);
+                            else ball.velocity.y = abs(ball.velocity.y);
+                        }
+                        brick.destroyed = true;
+                        game->score += score_bonus;
+                        if(game->pickups_count < max_num_pickups && rand()%pickup_spawn_chance_inv == 0) {
+                            Pickup &pickup = game->pickups[game->pickups_count++];
+                            pickup.type = (BonusType)(rand()%(NUM_BONUS_TYPES-1)+1);
+                            pickup.position.x = brick_pos.x + brick_width/2 - (pickup_width / 2);
+                            pickup.position.y = brick_pos.y + brick_height/2 - (pickup_height / 2);
+                        }
+                    }
+                }
             }
         }
     }
-    return count;
 }
-       
-// narysowanie napisu txt na powierzchni screen, zaczynając od punktu (x, y)
-// charset to bitmapa 128x128 zawierająca znaki
-void DrawString(SDL_Surface *screen, int x, int y, const char *text,
-                SDL_Surface *charset) {
-	int px, py, c;
-	SDL_Rect s, d;
-	s.w = 8;
-	s.h = 8;
-	d.w = 8;
-	d.h = 8;
-	while(*text) {
-		c = *text & 255;
-		px = (c % 16) * 8;
-		py = (c / 16) * 8;
-		s.x = px;
-		s.y = py;
-		d.x = x;
-		d.y = y;
-		SDL_BlitSurface(charset, &s, screen, &d);
-		x += 8;
-		text++;
+
+void reset_game(Game *game) {
+    game->balls_count = 1;
+    game->balls_speed = ball_base_speed;
+    game->balls_acceleration_start_time = SDL_GetTicks();
+    game->balls[0].position = {game->paddle_x+game->paddle_width/2-ball_box_width/2, paddle_y-ball_box_height};
+    game->balls[0].freezed = true;
+    game->balls[0].velocity = Vector2(1, 1).normalized() * ball_base_speed;
+}
+
+void deactivate_bonus(Game *game) {
+    switch (game->active_bonus_type) {
+        case SLOW_MOTION_BONUS:
+            game->balls_speed = ball_base_speed;
+            game->balls_acceleration_start_time = SDL_GetTicks();
+            break;
+        case WIDER_PADDLE_BONUS:
+            game->paddle_x += (extended_paddle_width-base_paddle_width)/2;
+            game->paddle_width = base_paddle_width;
+            break;
+        default:
+            break;
+    }
+    game->active_bonus_type = NO_BONUS;
+}
+
+void new_level(Game *game) {
+    deactivate_bonus(game);
+    for(int y = 0; y < bricks_per_column; ++y) {
+        for(int x = 0; x < bricks_per_line; ++x) {
+            Brick &brick = game->bricks[y][x];
+            if(brick.type >= 0)
+                brick.destroyed = false;
+        }
+    }
+    game->paddle_width = base_paddle_width;
+    game->pickups_count = 0;
+    game->paddle_x = gameplay_area_width/2-base_paddle_width/2;
+    reset_game(game);
+}
+
+void new_game(Game *game) {
+    game->score = 0;
+    game->lives_left = 2;
+    game->levels_file->clear();
+    game->levels_file->seekg(0);
+    load_level(game);
+    new_level(game);
+}
+
+bool handle_events(Game *game) {
+    SDL_Event event;
+    if(game->give_name) {
+        while(SDL_PollEvent(&event)) {
+            switch(event.type) {
+                case SDL_QUIT:
+                    return false;
+                case SDL_KEYDOWN:
+                    unsigned sym = event.key.keysym.sym;
+                    if(sym >= 'a' && sym <= 'z') {
+                        game->top_players[game->top_score_index] += sym;
+                    } else if(sym == SDLK_RETURN) {
+                        game->give_name = false;
+                        game->show_highscores = true;
+                    }
+                    break;
+            }
+        }
+    } else if(game->show_highscores) {
+        while(SDL_PollEvent(&event)) {
+            switch(event.type) {
+                case SDL_QUIT:
+                    return false;
+                case SDL_KEYDOWN:
+                    game->show_highscores = false;
+                    break;
+            }
+        }
+    } else {
+        game->paddle_moving_dir = 0;
+        const Uint8 *state = SDL_GetKeyboardState(NULL);
+        if(state[SDL_SCANCODE_LEFT])
+            --game->paddle_moving_dir;
+        if(state[SDL_SCANCODE_RIGHT])
+            ++game->paddle_moving_dir;
+        
+        while(SDL_PollEvent(&event)) {
+            switch(event.type) {
+                case SDL_QUIT:
+                    return false;
+                case SDL_KEYDOWN:
+                    if(game->gameover) {
+                        game->gameover = false;
+                        new_game(game);
+                    } else {
+                        if(event.key.keysym.sym == SDLK_s) {
+                            for(int i = 0; i < game->balls_count; ++i) {
+                                game->balls[i].freezed = false;
+                            }
+                        }
+                    }
+                    break;
+            }
+        }
+    }
+    return true;
+}
+
+void activate_bonus(Game *game, BonusType bonus) {
+    deactivate_bonus(game);
+    game->score += score_bonus;
+    if(bonus == EXTRA_LIFE_BONUS) {
+        ++game->lives_left;
+    } else if(bonus == THREE_BALLS_BONUS) {
+        if(game->balls_count == 1) {
+            game->balls_count = 3;
+            game->balls[1].position = game->balls[2].position = game->balls[0].position;
+            Vector2 t {5, 1};
+            Vector2 &v0 = game->balls[0].velocity;
+            Vector2 &v1 = game->balls[1].velocity;
+            v1 = {t.x * v0.x - t.y * v0.y, t.y * v0.x + t.x * v0.y};
+            t.y = -1;
+            Vector2 &v2 = game->balls[2].velocity;
+            v2 = {t.x * v0.x - t.y * v0.y, t.y * v0.x + t.x * v0.y};
+        }
+    } else {
+        game->active_bonus_type = bonus;
+        game->active_bonus_start_time = SDL_GetTicks();
+        switch (bonus) {
+            case SLOW_MOTION_BONUS:
+                game->balls_speed = ball_base_speed/2;
+                break;
+            case WIDER_PADDLE_BONUS:
+                game->paddle_x -= (extended_paddle_width-base_paddle_width)/2;
+                game->paddle_width = extended_paddle_width;
+                break;
+            default:
+                break;
+        }
     }
 }
 
+void update(Game *game) {
+    if(game->gameover)
+        return;
+    unsigned non_destroyed_bricks = 0;
+    for(int y = 0; y < bricks_per_column; ++y) {
+        for(int x = 0; x < bricks_per_line; ++x) {
+            Brick &brick = game->bricks[y][x];
+            if(!brick.destroyed)
+                ++non_destroyed_bricks;
+        }
+    }
+    if(non_destroyed_bricks == 0) {
+        game->score += score_bonus*10;
 
-// narysowanie na ekranie screen powierzchni sprite w punkcie (x, y)
-// (x, y) to punkt środka obrazka sprite na ekranie
-void DrawSurface(SDL_Surface *screen, SDL_Surface *sprite, int x, int y) {
-	SDL_Rect dest;
-	dest.x = x - sprite->w / 2;
-	dest.y = y - sprite->h / 2;
-	dest.w = sprite->w;
-	dest.h = sprite->h;
-	SDL_BlitSurface(sprite, NULL, screen, &dest);
-}
-
-
-// rysowanie pojedynczego pixela
-void DrawPixel(SDL_Surface *surface, int x, int y, Uint32 color) {
-	int bpp = surface->format->BytesPerPixel;
-	Uint8 *p = (Uint8 *)surface->pixels + y * surface->pitch + x * bpp;
-	*(Uint32 *)p = color;
-}
-
-
-// rysowanie linii o długości l w pionie (gdy dx = 0, dy = 1) 
-// bądź poziomie (gdy dx = 1, dy = 0)
-void DrawLine(SDL_Surface *screen, int x, int y, int l, int dx, int dy, Uint32 color) {
-	for(int i = 0; i < l; i++) {
-		DrawPixel(screen, x, y, color);
-		x += dx;
-		y += dy;
+        if(!load_level(game)) {
+            game->gameover = true;
+        } else new_level(game);
+    }
+    
+    unsigned t = SDL_GetTicks();
+    if(game->active_bonus_type && (t - game->active_bonus_start_time) > bonus_duration*1000) {
+        deactivate_bonus(game);
+    }
+    
+    for(int i = 0; i < game->pickups_count; ++i) {
+        Pickup &pickup = game->pickups[i];
+        pickup.position.y += pickup_velocity;
+        
+        bool overlap = aabbs_overlap(pickup.position, {pickup_width, pickup_height},
+                                     {game->paddle_x, paddle_y}, {game->paddle_width, paddle_height});
+        if(pickup.position.y >= gameplay_area_height || overlap) {
+            if(overlap)
+                activate_bonus(game, pickup.type);
+            pickup = game->pickups[game->pickups_count-1];
+            --game->pickups_count;
+        }
+    }
+    
+    float prev_paddle_x = game->paddle_x;
+    game->paddle_x += game->paddle_moving_dir * paddle_velocity;
+    game->paddle_x = max(game->paddle_x, 0.0f);
+    game->paddle_x = min(game->paddle_x, (float)gameplay_area_width-game->paddle_width);
+    
+    if(game->active_bonus_type != SLOW_MOTION_BONUS) {
+        game->balls_speed = ball_base_speed + (t - game->balls_acceleration_start_time)/(ball_time_to_reach_max_speed*1000)*(ball_max_speed-ball_base_speed);
+        game->balls_speed = min(game->balls_speed, ball_max_speed);
+    }
+    for(int i = 0; i < game->balls_count; ++i) {
+        Ball &ball = game->balls[i];
+        if(ball.freezed) {
+            ball.position.x += game->paddle_x - prev_paddle_x;
+        } else {
+            ball.position += ball.velocity.normalized() * game->balls_speed;
+            if(aabbs_overlap(ball.position, {ball_box_width, ball_box_height},
+                             {game->paddle_x, paddle_y}, {game->paddle_width, paddle_height})) {
+                float ratio = ball.position.x + ball_box_width/2 - (game->paddle_x + game->paddle_width/2);
+                ratio /= game->paddle_width/2;
+                float theta = ratio * 70 * 2*M_PI/360;
+                ball.velocity = { sin(theta), -cos(theta) };
+                if(game->active_bonus_type == STICKY_PADDLE_BONUS)
+                    ball.freezed = true;
+            } else if(ball.position.y >= gameplay_area_height) {
+                ball = game->balls[game->balls_count-1];
+                --game->balls_count;
+            }
+        }
+    }
+    
+    handle_wall_collisions(game);
+    handle_brick_collisions(game);
+    
+    if(game->balls_count == 0) {
+        if(game->lives_left == 0) {
+            game->gameover = true;
+        } else {
+            --game->lives_left;
+            reset_game(game);
+        }
+    }
+    
+    if(game->gameover) {
+        for(int i = 4; i >= 0; --i) {
+            if(game->score > game->top_scores[i]) {
+                game->give_name = true;
+                game->top_score_index = i;
+            }
+        }
+        if(!game->give_name)
+            game->show_highscores = true;
+        else {
+            for(int j = 3; j >= (int)game->top_score_index; --j) {
+                game->top_players[j+1] = game->top_players[j];
+                game->top_scores[j+1] = game->top_scores[j];
+            }
+            game->top_players[game->top_score_index] = "";
+            game->top_scores[game->top_score_index] = game->score;
+        }
     }
 }
 
-
-// rysowanie prostokąta o długości boków l i k
-void DrawRectangle(SDL_Surface *screen, int x, int y, int l, int k,
-                   Uint32 outlineColor, Uint32 fillColor) {
-	DrawLine(screen, x, y, k, 0, 1, outlineColor);
-	DrawLine(screen, x + l - 1, y, k, 0, 1, outlineColor);
-	DrawLine(screen, x, y, l, 1, 0, outlineColor);
-	DrawLine(screen, x, y + k - 1, l, 1, 0, outlineColor);
-	for(int i = y + 1; i < y + k - 1; i++)
-		DrawLine(screen, x + 1, i, l - 2, 1, 0, fillColor);
-}
-
-void draw(SDL_Surface *screen, const Gameplay &game) {
-//    unsigned czarny = SDL_MapRGB(screen->format, 0x00, 0x00, 0x00);
-    unsigned zielony = SDL_MapRGB(screen->format, 0x00, 0xFF, 0x00);
-    unsigned czerwony = SDL_MapRGB(screen->format, 0xFF, 0x00, 0x00);
-    unsigned niebieski = SDL_MapRGB(screen->format, 0x11, 0x11, 0xCC);
-    for(auto i : range(game.balls.count)) {
-        const Vector2D *position = game.balls.position;
-        DrawRectangle(screen, position[i].x, position[i].y, ball_box_width, ball_box_height, czerwony, niebieski);
+void draw(SDL_Renderer *renderer, const Game &game, const Resources &res)
+{
+    SDL_RenderClear(renderer);
+    
+    if(game.give_name) {
+        draw_string(renderer, res.charset_texture, highscores_x, highscores_y, "Highscore!\nGive your name:");
+        draw_string(renderer, res.charset_texture, highscores_x, highscores_y+20, game.top_players[game.top_score_index].c_str());
+    } else if(game.show_highscores) {
+        char buff[] = "1.";
+        for(int i = 0; i < 5; ++i) {
+            draw_string(renderer, res.charset_texture, highscores_x-20, highscores_y+i*10, buff);
+            draw_string(renderer, res.charset_texture, highscores_x, highscores_y+i*10, game.top_players[i].c_str());
+            stringstream ss;
+            ss << game.top_scores[i];
+            draw_string(renderer, res.charset_texture, highscores_x+64, highscores_y+i*10, ss.str().c_str());
+            ++buff[0];
+        }
+    } else {
+        constexpr unsigned X = gameplay_area_offset_x;
+        constexpr unsigned Y = gameplay_area_offset_y;
+        SDL_RenderClear(renderer);
+        SDL_RenderCopy(renderer, res.background_texture, nullptr, nullptr);
+        SDL_Rect r;
+        
+        r.w = brick_width;
+        r.h = brick_height;
+        for(int y = 0; y < bricks_per_column; ++y) {
+            for(int x = 0; x < bricks_per_line; ++x) {
+                const Brick &brick = game.bricks[y][x];
+                if(!brick.destroyed) {
+                    r.x = X + x * brick_width;
+                    r.y = Y + y * brick_height;
+                    SDL_RenderCopy(renderer, res.brick_textures[brick.type], nullptr, &r);
+                }
+            }
+        }
+        
+        for(int i = 0; i < game.balls_count; ++i) {
+            const Ball &ball = game.balls[i];
+            r.x = X + ball.position.x - (ball_texture_width-ball_box_width)/2;
+            r.y = Y + ball.position.y - (ball_texture_height-ball_box_height)/2;;
+            r.w = ball_texture_width;
+            r.h = ball_texture_height;
+            SDL_RenderCopy(renderer, res.ball_texture, nullptr, &r);
+        }
+        
+        r.x = X + game.paddle_x;
+        r.y = Y + paddle_y;
+        r.w = game.paddle_width;
+        r.h = paddle_height;
+        SDL_RenderCopy(renderer, res.paddle_texture, nullptr, &r);
+        
+        r.w = ball_texture_width;
+        r.h = ball_texture_height;
+        r.y = lives_left_y;
+        for(int i = 0; i < game.lives_left; ++i) {
+            r.x = lives_left_x + i * (ball_texture_width + 4);
+            SDL_RenderCopy(renderer, res.ball_texture, nullptr, &r);
+        }
+        
+        for(int i = 0; i < game.pickups_count; ++i) {
+            const Pickup &pickup = game.pickups[i];
+            r.x = X + pickup.position.x;
+            r.y = Y + pickup.position.y;
+            r.w = pickup_width;
+            r.h = pickup_height;
+            SDL_RenderCopy(renderer, res.pickup_textures[pickup.type], nullptr, &r);
+        }
+        
+        stringstream ss;
+        ss << game.score;
+        draw_string(renderer, res.charset_texture, score_x, score_y, ss.str().c_str()
+                    );
+        
+        if(game.gameover)
+            SDL_RenderCopy(renderer, res.gameover_texture, nullptr, nullptr);
     }
-    for(auto i : range(game.bricks.count)) {
-        const Vector2D *position = game.bricks.position;
-        DrawRectangle(screen, position[i].x, position[i].y, brick_width, brick_height, zielony, niebieski);
-    }
-}
 
-void physics_step(Gameplay *game) {
-    Balls &balls = game->balls;
-    for(auto i : range(balls.count)) {
-        balls.position[i] += balls.velocity[i];
-        AABB aabb;
-        aabb.position = balls.position[i];
-        aabb.box = {ball_box_width, ball_box_height};
-        handle_wall_collisions(&aabb, &balls.velocity[i]);
-        balls.position[i] = aabb.position;
-    }
+    SDL_RenderPresent(renderer);
 }
 
 int main(int argc, char **argv) {
-	int t1, t2, quit, frames;
-	double delta, worldTime, fpsTimer, fps, distance, etiSpeed;
-	SDL_Event event;
-	SDL_Surface *screen, *charset;
-	SDL_Surface *eti;
-	SDL_Texture *scrtex;
-	SDL_Window *window;
-	SDL_Renderer *renderer;
-
-	if(SDL_Init(SDL_INIT_TIMER|SDL_INIT_VIDEO) != 0) {
-		printf("SDL_Init error: %s\n", SDL_GetError());
-		return 1;
-    }
-
-//  tryb pełnoekranowy
-//	rc = SDL_CreateWindowAndRenderer(0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP,
-//	                                 &window, &renderer);
-	window = SDL_CreateWindow("Arkanoid", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                              SCREEN_WIDTH, SCREEN_HEIGHT, 0);
-    renderer = SDL_CreateRenderer(window, -1
-                                  //,0
-                                  , SDL_RENDERER_PRESENTVSYNC
-                                  );
-	if(!renderer || !window) {
-		SDL_Quit();
-		printf("Error: %s\n", SDL_GetError());
-		return 1;
-    }
-	
-	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
-	SDL_RenderSetLogicalSize(renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
-	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-
-
-	screen = SDL_CreateRGBSurface(0, SCREEN_WIDTH, SCREEN_HEIGHT, 32,
-	                              0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
-
-	scrtex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
-	                           SDL_TEXTUREACCESS_STREAMING,
-	                           SCREEN_WIDTH, SCREEN_HEIGHT);
-
-
-	// wyłączenie widoczności kursora myszy
-	SDL_ShowCursor(SDL_DISABLE);
-
-	// wczytanie obrazka cs8x8.bmp
-	charset = SDL_LoadBMP("./cs8x8.bmp");
-	if(charset == NULL) {
-		printf("SDL_LoadBMP(cs8x8.bmp) error: %s\n", SDL_GetError());
-		SDL_FreeSurface(screen);
-		SDL_DestroyTexture(scrtex);
-		SDL_DestroyWindow(window);
-		SDL_DestroyRenderer(renderer);
-		SDL_Quit();
-		return 1;
-    }
-	SDL_SetColorKey(charset, true, 0x000000);
-
-	eti = SDL_LoadBMP("./eti.bmp");
-	if(eti == NULL) {
-		printf("SDL_LoadBMP(eti.bmp) error: %s\n", SDL_GetError());
-		SDL_FreeSurface(charset);
-		SDL_FreeSurface(screen);
-		SDL_DestroyTexture(scrtex);
-		SDL_DestroyWindow(window);
-		SDL_DestroyRenderer(renderer);
-		SDL_Quit();
-		return 1;
-    }
-
-	char text[128];
-	int czarny = SDL_MapRGB(screen->format, 0x00, 0x00, 0x00);
-//	int zielony = SDL_MapRGB(screen->format, 0x00, 0xFF, 0x00);
-	int czerwony = SDL_MapRGB(screen->format, 0xFF, 0x00, 0x00);
-	int niebieski = SDL_MapRGB(screen->format, 0x11, 0x11, 0xCC);
-
-	t1 = SDL_GetTicks();
-
-	frames = 0;
-	fpsTimer = 0;
-	fps = 0;
-	quit = 0;
-	worldTime = 0;
-	distance = 0;
-	etiSpeed = 1;
+    srand(time(nullptr));
+    SDL_Window *window;
+    SDL_Renderer *renderer;
+    init(&window, &renderer);
     
-    Gameplay game;
-    game.balls.count = 1;
-    game.balls.position[0] = {256, 256};
-    game.balls.velocity[0] = {8, 8};
-//    game.balls.position[1] = {16, 16};
-//    game.balls.velocity[1] = {2, 2};
-    
-    game.bricks.count = load_bricks(game.bricks.position, game.bricks.type, default_level_data);
+    Game game;
+    load_scores(&game);
+    ifstream f;
+    f.open("levels.txt");
+    assert(f);
+    game.levels_file = &f;
+    Resources res;
+    load_resources(renderer, res);
+    new_game(&game);
 
-	while(!quit) {
-		t2 = SDL_GetTicks();
-
-		// w tym momencie t2-t1 to czas w milisekundach,
-		// jaki uplynał od ostatniego narysowania ekranu
-		// delta to ten sam czas w sekundach
-		delta = (t2 - t1) * 0.001;
-		t1 = t2;
-
-		worldTime += delta;
-
-		distance += etiSpeed * delta;
-
-		SDL_FillRect(screen, NULL, czarny);
-
-		DrawSurface(screen, eti,
-		            SCREEN_WIDTH / 2 + sin(distance) * SCREEN_HEIGHT / 3,
-			    SCREEN_HEIGHT / 2 + cos(distance) * SCREEN_HEIGHT / 3);
-
-
-//		DrawScreen(screen, plane, ship, charset, worldTime, delta, vertSpeed);
-
-		// naniesienie wyniku rysowania na rzeczywisty ekran
-//		SDL_Flip(screen);
-
-		fpsTimer += delta;
-		if(fpsTimer > 0.5) {
-			fps = frames * 2;
-			frames = 0;
-			fpsTimer -= 0.5;
-        }
-
-		// tekst informacyjny
-		DrawRectangle(screen, 4, 4, SCREEN_WIDTH - 8, 36, czerwony, niebieski);
-		sprintf(text, "Szablon drugiego zadania, czas trwania = %.1lf s  %.0lf klatek / s", worldTime, fps);
-		DrawString(screen, screen->w / 2 - strlen(text) * 8 / 2, 10, text, charset);
-		sprintf(text, "Esc - wyjscie, \030 - przyspieszenie, \031 - zwolnienie");
-		DrawString(screen, screen->w / 2 - strlen(text) * 8 / 2, 26, text, charset);
-        
-        physics_step(&game);
-        draw(screen, game);
-
-		SDL_UpdateTexture(scrtex, NULL, screen->pixels, screen->pitch);
-//		SDL_RenderClear(renderer);
-		SDL_RenderCopy(renderer, scrtex, NULL, NULL);
-		SDL_RenderPresent(renderer);
-
-		// obsługa zdarzeń (o ile jakieś zaszły)
-		while(SDL_PollEvent(&event)) {
-			switch(event.type) {
-				case SDL_KEYDOWN:
-					if(event.key.keysym.sym == SDLK_ESCAPE) quit = 1;
-					else if(event.key.keysym.sym == SDLK_UP) etiSpeed = 2.0;
-					else if(event.key.keysym.sym == SDLK_DOWN) etiSpeed = 0.3;
-					break;
-				case SDL_KEYUP:
-					etiSpeed = 1.0;
-					break;
-				case SDL_QUIT:
-					quit = 1;
-					break;
-            }
-        }
-		frames++;
+	while(true) {
+        if(!handle_events(&game))
+            break;
+        update(&game);
+        draw(renderer, game, res);
+        SDL_Delay(16);
     }
+    
+    save_scores(&game);
 
-	// zwolnienie powierzchni
-	SDL_FreeSurface(charset);
-	SDL_FreeSurface(screen);
-	SDL_DestroyTexture(scrtex);
-	SDL_DestroyRenderer(renderer);
-	SDL_DestroyWindow(window);
-
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
 	SDL_Quit();
 	return 0;
 }
