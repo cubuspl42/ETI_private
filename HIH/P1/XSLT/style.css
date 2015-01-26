@@ -1,0 +1,19 @@
+table, th, td {
+   border: 1px solid black;
+}
+
+th, td {
+    padding: 8px;
+}
+
+.gps {
+    font-style: italic;
+}
+
+.nkl {
+    color: red;
+}
+
+footer {
+    margin-top: 10px;
+}

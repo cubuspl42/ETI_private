@@ -1,0 +1,431 @@
+<?xml version="1.0" encoding="utf-8"?>
+<zawody>
+    <informacje>
+        <ranga>Mistrzostwa Gdańska</ranga>
+        <termin>2013-05-19</termin>
+        <baza gps="N54° 21′ 58.90″, E18° 32′ 46.24″">Zespół Kształcenia Podstawowego i Gimnazjalnego Nr 17</baza>
+        <organizator url="http://www.harpagan.pl/klub">PKO Harpagan Gdańsk</organizator>
+        <patroni_medialni>
+            <patron url="http://polskanarowery.pl/">Polska na rowery</patron>
+            <patron url="http://trojmiasto.pl/" >Trojmiasto.pl</patron>
+            <patron url="http://www.wrotapomorza.pl/">Wrota Pomorza</patron>
+        </patroni_medialni>
+    </informacje>
+    <wyniki>
+        <kategoria nazwa="K-14">
+            <zawodnik miejsce="2">
+                <czas>36:18</czas>
+                <start>1:00</start>
+                <meta>37:18</meta>
+                <nazwisko>JACHIMKOWSKA</nazwisko>
+                <imie>Nikola</imie>
+                <klub>PKO Harpagan Gdańsk</klub>
+                <miasto>Gdańsk</miasto>
+                <rocznik>1999</rocznik>
+                <nr_pwp>012</nr_pwp>
+                <nr_pzos>02316</nr_pzos>
+                <nr_pozos>G11172</nr_pozos>
+                <pkt_ipwp>37</pkt_ipwp>
+            </zawodnik>
+            <zawodnik miejsce="1">
+                <czas>34:30</czas>
+                <start>19:00</start>
+                <meta>53:30</meta>
+                <nazwisko>LIPSKA</nazwisko>
+                <imie>Marta</imie>
+                <klub>PKO Harpagan Gdańsk</klub>
+                <miasto>Gdańsk</miasto>
+                <rocznik>1999</rocznik>
+                <nr_pwp>048</nr_pwp>
+                <nr_pzos>02319</nr_pzos>
+                <nr_pozos>G11175</nr_pozos>
+                <pkt_ipwp>40</pkt_ipwp>
+            </zawodnik>
+            <zawodnik miejsce="3">
+                <czas>41:22</czas>
+                <start>13:00</start>
+                <meta>54:22</meta>
+                <nazwisko>DEREWIECKA</nazwisko>
+                <imie>Julia</imie>
+                <klub>PKO Harpagan Gdańsk</klub>
+                <miasto>Gdańsk</miasto>
+                <rocznik>1999</rocznik>
+                <nr_pwp>043</nr_pwp>
+                <nr_pzos>02312</nr_pzos>
+                <nr_pozos>G11168</nr_pozos>
+                <pkt_ipwp>35</pkt_ipwp>
+            </zawodnik>
+            <zawodnik miejsce="4">
+                <czas>66:41</czas>
+                <start>10:00</start>
+                <meta>76:41</meta>
+                <nazwisko>KULA</nazwisko>
+                <imie>Agata</imie>
+                <klub>PKO Harpagan Gdańsk</klub>
+                <miasto>Gdańsk</miasto>
+                <rocznik>1999</rocznik>
+                <nr_pwp>044</nr_pwp>
+                <nr_pzos>02318</nr_pzos>
+                <nr_pozos>G11174</nr_pozos>
+                <pkt_ipwp>33</pkt_ipwp>
+            </zawodnik>
+            <zawodnik miejsce="5">
+                <czas>72:00</czas>
+                <start>4:00</start>
+                <meta>76:00</meta>
+                <nazwisko>GOLUBIEWSKA</nazwisko>
+                <imie>Emilia</imie>
+                <klub>PKO Harpagan Gdańsk</klub>
+                <miasto>Gdańsk</miasto>
+                <rocznik>1999</rocznik>
+                <nr_pwp>015</nr_pwp>
+                <nr_pzos>02314</nr_pzos>
+                <nr_pozos>G11170</nr_pozos>
+                <pkt_ipwp>31</pkt_ipwp>
+            </zawodnik>
+        </kategoria>
+        <kategoria nazwa="K-17">
+            <zawodnik miejsce="1">
+                <czas>62:18</czas>
+                <start>15:00</start>
+                <meta>77:18</meta>
+                <nazwisko>LISEWSKA</nazwisko>
+                <imie>Agnieszka</imie>
+                <klub>PKO Harpagan Gdańsk</klub>
+                <miasto>Gdańsk</miasto>
+                <rocznik>1998</rocznik>
+                <nr_pwp>018</nr_pwp>
+                <nr_pzos>02091</nr_pzos>
+                <nr_pozos>G11148</nr_pozos>
+                <pkt_ipwp>40</pkt_ipwp>
+            </zawodnik>
+            <zawodnik miejsce="2">
+                <czas>84:20</czas>
+                <start>6:00</start>
+                <meta>84:20</meta>
+                <nazwisko>SZALA</nazwisko>
+                <imie>Małgorzata</imie>
+                <klub>PKO Harpagan Gdańsk</klub>
+                <miasto>Gdańsk</miasto>
+                <rocznik>1998</rocznik>
+                <nr_pwp>041</nr_pwp>
+                <nr_pzos>02089</nr_pzos>
+                <nr_pozos>G11153</nr_pozos>
+                <pkt_ipwp>37</pkt_ipwp>
+            </zawodnik>
+            <zawodnik miejsce="NKL">
+                <czas>38:40</czas>
+                <start>21:00</start>
+                <meta>59:40</meta>
+                <nazwisko>BREJNAK</nazwisko>
+                <imie>Natalia</imie>
+                <klub>PKO Harpagan Gdańsk</klub>
+                <miasto>Gdańsk</miasto>
+                <rocznik>1998</rocznik>
+                <nr_pwp>017</nr_pwp>
+                <nr_pzos>02093</nr_pzos>
+                <nr_pozos>G11140</nr_pozos>
+                <pkt_ipwp>0</pkt_ipwp>
+            </zawodnik>
+        </kategoria>
+        <kategoria nazwa="K-21">
+            <zawodnik miejsce="1">
+                <czas>58:22</czas>
+                <start>22:00</start>
+                <meta>80:22</meta>
+                <nazwisko>LINOWSKA</nazwisko>
+                <imie>Julita</imie>
+                <klub>PKO Harpagan Gdańsk</klub>
+                <miasto>Gdańsk</miasto>
+                <rocznik>1993</rocznik>
+                <nr_pwp>005</nr_pwp>
+                <nr_pzos>00117</nr_pzos>
+                <nr_pozos>G11034</nr_pozos>
+                <pkt_ipwp>40</pkt_ipwp>
+            </zawodnik>
+            <zawodnik miejsce="2">
+                <czas>74:12</czas>
+                <start>26:00</start>
+                <meta>100:12</meta>
+                <nazwisko>ŻYGIEWICZ</nazwisko>
+                <imie>Małgorzata</imie>
+                <klub>niezrzeszona</klub>
+                <miasto>Gdańsk</miasto>
+                <nr_pwp>053</nr_pwp>
+                <pkt_ipwp>37</pkt_ipwp>
+            </zawodnik>
+            <zawodnik miejsce="3">
+                <czas>100:59</czas>
+                <start>14:00</start>
+                <meta>114:59</meta>
+                <nazwisko>MOSKAL</nazwisko>
+                <imie>Monika</imie>
+                <klub>niezrzeszona</klub>
+                <miasto>Gdańsk</miasto>
+                <rocznik>1981</rocznik>
+                <nr_pwp>007</nr_pwp>
+                <pkt_ipwp>35</pkt_ipwp>
+            </zawodnik>
+        </kategoria>
+        <kategoria nazwa="M-14">
+            <zawodnik miejsce="1">
+                <czas>39:15</czas>
+                <start>11:00</start>
+                <meta>50:15</meta>
+                <nazwisko>PUKOWSKI</nazwisko>
+                <imie>Paweł</imie>
+                <klub>PKO Harpagan Gdańsk</klub>
+                <miasto>Gdańsk</miasto>
+                <rocznik>1999</rocznik>
+                <nr_pwp>031</nr_pwp>
+                <nr_pzos>02322</nr_pzos>
+                <nr_pozos>G11178</nr_pozos>
+                <pkt_ipwp>40</pkt_ipwp>
+            </zawodnik>
+            <zawodnik miejsce="2">
+                <czas>47:47</czas>
+                <start>5:00</start>
+                <meta>52:47</meta>
+                <nazwisko>SKRZYPCZAK</nazwisko>
+                <imie>Filip</imie>
+                <klub>PKO Harpagan Gdańsk</klub>
+                <miasto>Gdańsk</miasto>
+                <rocznik>1999</rocznik>
+                <nr_pwp>033</nr_pwp>
+                <nr_pzos>02323</nr_pzos>
+                <nr_pozos>G11179</nr_pozos>
+                <pkt_ipwp>37</pkt_ipwp>
+            </zawodnik>
+            <zawodnik miejsce="3">
+                <czas>96:56</czas>
+                <start>2:00</start>
+                <meta>98:56</meta>
+                <nazwisko>MATERNY</nazwisko>
+                <imie>Adam</imie>
+                <klub>PKO Harpagan Gdańsk</klub>
+                <miasto>Gdańsk</miasto>
+                <rocznik>1999</rocznik>
+                <nr_pwp>032</nr_pwp>
+                <nr_pzos>02320</nr_pzos>
+                <nr_pozos>G11176</nr_pozos>
+                <pkt_ipwp>35</pkt_ipwp>
+            </zawodnik>
+        </kategoria>
+        <kategoria nazwa="M-17">
+            <zawodnik miejsce="1">
+                <czas>33:10</czas>
+                <start>4:00</start>
+                <meta>37:10</meta>
+                <nazwisko>PIECZKA</nazwisko>
+                <imie>Tymoteusz</imie>
+                <klub>PKO Harpagan Gdańsk</klub>
+                <miasto>Gdańsk</miasto>
+                <rocznik>1997</rocznik>
+                <nr_pwp>003</nr_pwp>
+                <nr_pzos>01140</nr_pzos>
+                <nr_pozos>G11060</nr_pozos>
+                <pkt_ipwp>40</pkt_ipwp>
+            </zawodnik>
+            <zawodnik miejsce="2">
+                <czas>48:07</czas>
+                <start>13:00</start>
+                <meta>61:07</meta>
+                <nazwisko>ŻEBROWSKI</nazwisko>
+                <imie>Artur</imie>
+                <klub>PKO Harpagan Gdańsk</klub>
+                <miasto>Gdańsk</miasto>
+                <rocznik>1998</rocznik>
+                <nr_pwp>023</nr_pwp>
+                <nr_pzos>02119</nr_pzos>
+                <nr_pozos>G11158</nr_pozos>
+                <pkt_ipwp>37</pkt_ipwp>
+            </zawodnik>
+            <zawodnik miejsce="6">
+                <czas>83:36</czas>
+                <start>34:00</start>
+                <meta>117:36</meta>
+                <nazwisko>WASZCZUK</nazwisko>
+                <imie>Bartosz</imie>
+                <klub>PKO Harpagan Gdańsk</klub>
+                <miasto>Gdańsk</miasto>
+                <rocznik>1998</rocznik>
+                <nr_pwp>040</nr_pwp>
+                <nr_pzos>02340</nr_pzos>
+                <nr_pozos>G11155</nr_pozos>
+                <pkt_ipwp>35</pkt_ipwp>
+            </zawodnik>
+            <zawodnik miejsce="NKL">
+                <czas>59:40</czas>
+                <start>25:00</start>
+                <meta>84:40</meta>
+                <nazwisko>CERN</nazwisko>
+                <imie>Kamil</imie>
+                <klub>PKO Harpagan Gdańsk</klub>
+                <miasto>Gdańsk</miasto>
+                <rocznik>1998</rocznik>
+                <nr_pwp>024</nr_pwp>
+                <nr_pzos>02094</nr_pzos>
+                <nr_pozos>G11141</nr_pozos>
+                <pkt_ipwp>0</pkt_ipwp>
+            </zawodnik>
+        </kategoria>
+        <kategoria nazwa="M-20">
+            <zawodnik miejsce="1">
+                <czas>55:44</czas>
+                <start>15:00</start>
+                <meta>70:44</meta>
+                <nazwisko>DOLATOWSKI</nazwisko>
+                <imie>Piotr</imie>
+                <klub>PKO Harpagan Gdańsk</klub>
+                <miasto>Gdańsk</miasto>
+                <rocznik>1994</rocznik>
+                <nr_pwp>027</nr_pwp>
+                <nr_pzos>00114</nr_pzos>
+                <nr_pozos>G11031</nr_pozos>
+                <pkt_ipwp>40</pkt_ipwp>
+            </zawodnik>
+            <zawodnik miejsce="2">
+                <czas>64:18</czas>
+                <start>35:00</start>
+                <meta>99:18</meta>
+                <nazwisko>SZPAKOWSKI</nazwisko>
+                <imie>Adrian</imie>
+                <klub>PKO Harpagan Gdańsk</klub>
+                <miasto>Gdańsk</miasto>
+                <rocznik>1993</rocznik>
+                <nr_pwp>026</nr_pwp>
+                <nr_pzos>00120</nr_pzos>
+                <nr_pozos>G11037</nr_pozos>
+                <pkt_ipwp>37</pkt_ipwp>
+            </zawodnik>
+        </kategoria>
+        <kategoria nazwa="M-21">
+            <zawodnik miejsce="1">
+                <czas>53:19</czas>
+                <start>51:00</start>
+                <meta>104:19</meta>
+                <nazwisko>MYDLARSKI</nazwisko>
+                <imie>Jarosław</imie>
+                <klub>PKO Harpagan Gdańsk</klub>
+                <miasto>Gdańsk</miasto>
+                <rocznik>1977</rocznik>
+                <nr_pwp>050</nr_pwp>
+                <nr_pzos>00992L</nr_pzos>
+                <nr_pozos>G11021</nr_pozos>
+                <pkt_ipwp>40</pkt_ipwp>
+            </zawodnik>
+            <zawodnik miejsce="2">
+                <czas>56:28</czas>
+                <start>31:00</start>
+                <meta>87:28</meta>
+                <nazwisko>DOLATOWSKI</nazwisko>
+                <imie>Piotr</imie>
+                <klub>PKO Harpagan Gdańsk</klub>
+                <miasto>Gdańsk</miasto>
+                <rocznik>1994</rocznik>
+                <nr_pwp>027</nr_pwp>
+                <nr_pzos>00114</nr_pzos>
+                <nr_pozos>G11031</nr_pozos>
+                <pkt_ipwp>37</pkt_ipwp>
+            </zawodnik>
+            <zawodnik miejsce="3">
+                <czas>65:40</czas>
+                <start>23:00</start>
+                <meta>88:40</meta>
+                <nazwisko>LEŚNIOWSKI</nazwisko>
+                <imie>Mariusz</imie>
+                <klub>PKO Harpagan Gdańsk</klub>
+                <miasto>Gdańsk</miasto>
+                <rocznik>1975</rocznik>
+                <nr_pwp>047</nr_pwp>
+                <nr_pzos>01144</nr_pzos>
+                <nr_pozos>G11065</nr_pozos>
+                <pkt_ipwp>35</pkt_ipwp>
+            </zawodnik>
+            <zawodnik miejsce="4">
+                <czas>69:07</czas>
+                <start>27:00</start>
+                <meta>96:07</meta>
+                <nazwisko>JANKOWSKI</nazwisko>
+                <imie>Tomasz</imie>
+                <klub>PKO Harpagan Gdańsk</klub>
+                <miasto>Gdańsk</miasto>
+                <rocznik>1967</rocznik>
+                <nr_pwp>100</nr_pwp>
+                <nr_pozos>G11015</nr_pozos>
+                <pkt_ipwp>33</pkt_ipwp>
+            </zawodnik>
+            <zawodnik miejsce="5">
+                <czas>72:25</czas>
+                <start>43:00</start>
+                <meta>115:25</meta>
+                <nazwisko>ŚWIECA</nazwisko>
+                <imie>Adam</imie>
+                <miasto>Gdańsk</miasto>
+                <nr_pwp>045</nr_pwp>
+                <pkt_ipwp>31</pkt_ipwp>
+            </zawodnik>
+            <zawodnik miejsce="6">
+                <czas>79:30</czas>
+                <start>19:00</start>
+                <meta>98:30</meta>
+                <nazwisko>KWIATKOWSKI</nazwisko>
+                <imie>Marek</imie>
+                <miasto>Gdańsk</miasto>
+                <rocznik>1980</rocznik>
+                <nr_pwp>011</nr_pwp>
+                <pkt_ipwp>30</pkt_ipwp>
+            </zawodnik>
+            <zawodnik miejsce="7">
+                <czas>102:38</czas>
+                <start>3:00</start>
+                <meta>105:38</meta>
+                <nazwisko>KOSTECKI</nazwisko>
+                <imie>Łukasz</imie>
+                <miasto>Gdańsk</miasto>
+                <rocznik>1987</rocznik>
+                <nr_pwp>010</nr_pwp>
+                <pkt_ipwp>29</pkt_ipwp>
+            </zawodnik>
+            <zawodnik miejsce="8">
+                <czas>106:34</czas>
+                <start>11:00</start>
+                <meta>117:34</meta>
+                <nazwisko>LISOWSKI</nazwisko>
+                <imie>Adam</imie>
+                <miasto>Gdańsk</miasto>
+                <rocznik>1975</rocznik>
+                <nr_pwp>006</nr_pwp>
+                <pkt_ipwp>28</pkt_ipwp>
+            </zawodnik>
+            <zawodnik miejsce="NKL">
+                <start>23:00</start>
+                <nazwisko>WRÓBEL</nazwisko>
+                <imie>Marek</imie>
+                <klub>PKO Harpagan Gdańsk</klub>
+                <miasto>Gdańsk</miasto>
+                <rocznik>1989</rocznik>
+                <nr_pwp>051</nr_pwp>
+                <pkt_ipwp>0</pkt_ipwp>
+            </zawodnik>
+            <zawodnik miejsce="NKL">
+                <czas>49:47</czas>
+                <start>47:00</start>
+                <meta>96:47</meta>
+                <nazwisko>DĄBROWSKI</nazwisko>
+                <imie>Michał</imie>
+                <miasto>Gdańsk</miasto>
+                <nr_pwp>046</nr_pwp>
+                <pkt_ipwp>0</pkt_ipwp>
+            </zawodnik>
+        </kategoria>
+    </wyniki>
+    <mapy>
+        <mapa trasa="A" lokalizacja="mapy/2013.05.19_A.png" />
+        <mapa trasa="B" lokalizacja="mapy/2013.05.19_B.png" />
+        <mapa trasa="C" lokalizacja="mapy/2013.05.19_C.png" />
+        <mapa trasa="D" lokalizacja="mapy/2013.05.19_D.png" />
+        <mapa trasa="E" lokalizacja="mapy/2013.05.19_E.png" />
+        <mapa trasa="F" lokalizacja="mapy/2013.05.19_F.png" />
+    </mapy>
+</zawody>

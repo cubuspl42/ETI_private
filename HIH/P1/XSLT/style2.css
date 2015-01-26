@@ -1,0 +1,28 @@
+html {
+    color: aqua;
+}
+
+body {
+    background-color: gray;
+}
+
+table, th, td {
+    background-color: blue;
+    border: 1px solid black;
+}
+
+th, td {
+    padding: 8px;
+}
+
+.gps {
+    font-style: italic;
+}
+
+.nkl {
+    color: red;
+}
+
+footer {
+    margin-top: 10px;
+}
