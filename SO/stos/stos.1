@@ -1,0 +1,56 @@
+.\" generated with Ronn/v0.7.3
+.\" http://github.com/rtomayko/ronn/tree/0.7.3
+.
+.TH "STOS\.SH" "1" "May 2015" "" ""
+.
+.SH "NAME"
+\fBstos\.sh\fR \- simple command\-line client for STOS
+.
+.SH "SYNOPSIS"
+\fBstos\.sh\fR [\-hvpfs]
+.
+.SH "DESCRIPTION"
+stos\.sh allows you to easily upload source file to STOS from the command\-line\. The script optionally compiles the source file locally, in order to verify correctness\. The results can be presented in the table form\. The script is configured via \fIENVIRONMENT\fR\.
+.
+.SH "OPTIONS"
+.
+.TP
+\fB\-h\fR
+Show help\.
+.
+.TP
+\fB\-v\fR
+Be verbose\.
+.
+.TP
+\fB\-p\fR
+Compile source file locally and push it to STOS\.
+.
+.TP
+\fB\-f\fR
+Force uploading the file, even when local compilation fails (when combined with \fB\-p\fR)\.
+.
+.TP
+\fB\-s\fR
+Show status\.
+.
+.SH "ENVIRONMENT"
+.
+.TP
+\fBSTOS_USERNAME\fR
+STOS username\. Usually student\'s index number\.
+.
+.TP
+\fBSTOS_PASSWORD\fR
+STOS password in plain text\.
+.
+.TP
+\fBSTOS_FILENAME\fR
+File containing program\'s source code\.
+.
+.TP
+\fBSTOS_PROBLEM_ID\fR
+Unique problem identifier\. Can be found in problem\'s URL (index\.php?p=show&id=\fISTOS_PROBLEM_ID\fR)\.
+.
+.SH "AUTHOR"
+stos\.sh was created by Jakub Trzebiatowski\.
