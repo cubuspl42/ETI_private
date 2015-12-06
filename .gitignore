@@ -2,6 +2,7 @@ build/
 Debug/
 *.pyc
 __pycache__/
+*.zip
 
 *.opensdf
 *.sdf
