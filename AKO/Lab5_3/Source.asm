@@ -29,7 +29,7 @@ loop0:
 
 	vmovupd ymm2, [esi]
 
-	vmaxps ymm0, ymm1, ymm2
+	vmaxpd ymm0, ymm1, ymm2
 
 	vmovupd [edi], ymm0
 
