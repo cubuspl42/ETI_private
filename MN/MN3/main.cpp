@@ -8,6 +8,8 @@
 #include <map>
 #include <functional>
 
+using namespace std;
+
 const int N = 20;
 
 double freq[N] = {2.160913, 2.184642, 2.208656, 2.232956, 2.257543, 2.282417, 2.307579, 2.333029,
@@ -20,66 +22,10 @@ double s21[5][N] = {
         0.9994965668, 0.8073331021, 0.4250811874, 0.2196173998, 0.1257758825, 0.0785875430, 0.0524021994
 };
 
-const int D = 6;
 
-struct X {
-    int g = 1;
-    int a = 0;
-    int b = 0;
-
-    X() = default;
-
-    X(int g, int a, int b) : g(g), a(a), b(b) { }
-
-    bool operator<(const X &o) const {
-        return std::make_tuple(g, a, b) < std::make_tuple(o.g, o.a, o.b);
-    }
-
-    bool operator==(const X &o) const {
-        return g == o.g && a == o.a && b == o.b;
-    }
-};
-
-X _xn(X x, int c) {
-    if (x.g == 1) {
-        return X {2, c, x.b};
-    } else {
-        return X {1, x.a, c};
-    }
-}
-
-struct Expr {
-    Expr(double a, X x) : a(a), x(x) { }
-
-    double a = 1;
-    X x;
-};
-
-struct Equation {
-    Equation() = default;
-
-    X x;
-    std::vector<Expr> exprs;
-    double d = 0;
-};
-
-struct Trap {
-    int i = 0;
-    int k = -1;
-};
-
-struct GameDesc {
-    GameDesc(int n, std::vector<Trap> traps) : n(n), traps(traps) { }
-
-    int n = 1;
-    std::vector<Trap> traps;
-};
-
-std::vector<double> interpolate(std::vector<double> vector, std::vector<double> y, int n);
-
-std::vector<Equation> genEquations(const GameDesc &gd) {
-    std::vector<X> xs;
-    std::vector<Equation> eqs;
+vector<Equation> genEquations(const GameDesc &gd) {
+    vector<X> xs;
+    vector<Equation> eqs;
     const auto &traps = gd.traps;
 
     xs.push_back(X {1, 0, 0});
@@ -95,7 +41,7 @@ std::vector<Equation> genEquations(const GameDesc &gd) {
         for (int i = 1; i <= D; ++i) {
             int cn = c + i;
 
-            auto trapIt = std::find_if(traps.begin(), traps.end(), [=](Trap t) {
+            auto trapIt = find_if(traps.begin(), traps.end(), [=](Trap t) {
                 return t.i == cn;
             });
             if (trapIt != traps.end()) {
@@ -110,7 +56,7 @@ std::vector<Equation> genEquations(const GameDesc &gd) {
             } else {
                 X xn = _xn(x, cn);
 
-                auto eIt = std::find_if(eq.exprs.begin(), eq.exprs.end(), [=](Expr e) {
+                auto eIt = find_if(eq.exprs.begin(), eq.exprs.end(), [=](Expr e) {
                     return e.x == xn;
                 });
                 if (eIt != eq.exprs.end()) {
@@ -120,7 +66,7 @@ std::vector<Equation> genEquations(const GameDesc &gd) {
                     eq.exprs.push_back({1. / D, xn});
                 }
 
-                auto xsIt = std::find(xs.begin(), xs.end(), xn);
+                auto xsIt = find(xs.begin(), xs.end(), xn);
                 if (xsIt == xs.end()) {
                     xs.push_back(xn);
                 }
@@ -133,11 +79,11 @@ std::vector<Equation> genEquations(const GameDesc &gd) {
     return eqs;
 }
 
-std::pair<Matrix, Matrix> genSystem(const std::vector<Equation> &eqs) {
+pair<Matrix, Matrix> genSystem(const vector<Equation> &eqs) {
     int m = eqs.size();
     int n = m;
 
-    std::map<X, int> x2j;
+    map<X, int> x2j;
     int j = 1;
     for (auto &eq : eqs) {
         x2j[eq.x] = j;
@@ -164,25 +110,47 @@ std::pair<Matrix, Matrix> genSystem(const std::vector<Equation> &eqs) {
     return {a, b};
 }
 
-std::vector<double> coefs() {
+vector<double> coefs() {
 
 }
 
-double Si() {
-
+double dj(int j, const vector<double> & X, const vector<double> & c) {
+    return (cj(j + 1, c) - cj(j, c)) / (3 * hj(j, X));
 }
 
-double S(double x, const std::vector<double> & c) {
-
+double bj(int j, const vector<double> & X, const vector<double> & Y, const vector<double> & c) {
+    double _hj = hj(j, X);
+    double _cj = cj(j, c);
+    return dyj(j, Y) / _hj - _cj * _hj - dj(j, X, c) * _hj * _hj;
 }
 
-std::vector<double> interpolate(const std::vector<double> & X, const std::vector<double> & Y, int N) {
-    std::vector<double> c = coefs();
+double Sj(int j, double x, const vector<double> & X, const vector<double> & Y, const vector<double> & c) {
+    double _dx = x - xj(X, j);
+    return yj(Y, j) + bj(j, c) * _dx + cj(j, c) * _dx * _dx + dj(j, c) * _dx * _dx * _dx;
+}
+
+double S(double x, const vector<double> & X, const vector<double> & Y, const vector<double> & c) {
+    assert(X.size() > 0 && X.size() == Y.size());
+    int n = X.size();
+
+    double x1 = X.front();
+    double xn = X.back();
+    assert(x >= x1 && x <= xn);
+
+    for (int j = 1; j < n; ++j) {
+        if (x < xj(j, X)) {
+            return Sj(j, X, Y, c);
+        }
+    }
+}
+
+vector<double> interpolate(const vector<double> & X, const vector<double> & Y, int N) {
+    vector<double> c = coefs();
 
     double x1 = X.front();
     double xn = X.back();
 
-    std::vector<double> Yi(N);
+    vector<double> Yi(N);
     for (int i = 0; i < N; ++i) {
         double x = x1 + (xn - x1) / N * i;
         Yi[i] = S(x, c);
@@ -191,16 +159,16 @@ std::vector<double> interpolate(const std::vector<double> & X, const std::vector
 
 int main(int argc, const char *argv[]) {
     int n, N;
-    std::cin >> n >> N;
+    cin >> n >> N;
 
-    std::vector<double> X(n), Y(n);
+    vector<double> X(n), Y(n);
     for (auto &x : X) {
-        std::cin >> x;
+        cin >> x;
     }
     for (auto &y : Y) {
-        std::cin >> y;
+        cin >> y;
     }
 
-    std::vector<double> Yi = interpolate(X, Y, N);
+    vector<double> Yi = interpolate(X, Y, N);
 }
 
