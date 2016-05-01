@@ -1,6 +1,3 @@
-#include "Matrix.h"
-#include "gauss.h"
-
 #include <iostream>
 #include <vector>
 #include <queue>
@@ -9,21 +6,155 @@
 #include <functional>
 #include <cassert>
 #include <fstream>
+#include <iomanip>
 
 using namespace std;
 
-const int N = 20;
+class Matrix {
+private:
 
-double freq[N] = {2.160913, 2.184642, 2.208656, 2.232956, 2.257543, 2.282417, 2.307579, 2.333029,
-                  2.358767, 2.384794, 2.411110, 2.437714, 2.464608, 2.491789, 2.519259, 2.547017, 2.575062,
-                  2.603393, 2.632010, 2.660913};
+    std::vector<std::vector<double>> _rows;
 
-double s21[5][N] = {
-        0.0154473160, 0.0182357086, 0.0194462133, 0.0118513804, 0.0414972492, 0.4124997372,
-        0.9972000658, 0.9942401537, 0.9938543943, 0.9845163563, 0.9975239226, 0.9947690590, 0.9844258408,
-        0.9994965668, 0.8073331021, 0.4250811874, 0.2196173998, 0.1257758825, 0.0785875430, 0.0524021994
+public:
+
+    Matrix(int m, int n);
+
+    int numRows() const;
+
+    int numCols() const;
+
+    double & get(int i, int j);
+
+    double get(int i, int j) const;
+
+    void scaleRow(int i, double s);
+
+    void combineRows(int i, int k, double s);
+
+    Matrix extend(const Matrix & o) const;
+
+    Matrix extractCol(int j) const;
+
+    void print() const;
 };
 
+Matrix::Matrix(int m, int n) {
+    _rows.resize(m);
+    for (auto &r : _rows) {
+        r.resize(n);
+    }
+}
+
+void Matrix::combineRows(int i, int k, double s) {
+    assert(i >= 1 && i <= numRows());
+    assert(k >= 1 && k <= numRows());
+
+    int n = numCols();
+    for (int j = 1; j <= n; ++j) {
+        get(i, j) += get(k, j) * s;
+    }
+}
+
+void Matrix::scaleRow(int i, double s) {
+    assert(i >= 1 && i <= numRows());
+
+    for (auto &e : _rows[i - 1]) {
+        e *= s;
+    }
+}
+
+double & Matrix::get(int i, int j) {
+    assert(i >= 1 && i <= numRows());
+    assert(j >= 1 && j <= numCols());
+    return _rows[i - 1][j - 1];
+}
+
+double Matrix::get(int i, int j) const {
+    assert(i >= 1 && i <= numRows());
+    assert(j >= 1 && j <= numCols());
+    return _rows[i - 1][j - 1];
+}
+
+int Matrix::numCols() const {
+    return _rows.empty() ? 0 : _rows.front().size();
+}
+
+int Matrix::numRows() const {
+    return _rows.size();
+}
+
+Matrix Matrix::extend(const Matrix & o) const {
+    assert(numRows() == o.numRows());
+
+    int m = numRows();
+    int n = numCols();
+    int on = o.numCols();
+    int en = n + on;
+    Matrix e(m, en);
+
+    for (int i = 1; i <= m; ++i) {
+        for (int j = 1; j <= n; ++j) {
+            e.get(i, j) = get(i, j);
+        }
+    }
+
+    for (int i = 1; i <= m; ++i) {
+        for (int j = 1; j <= on; ++j) {
+            e.get(i, n + j) = o.get(i, j);
+        }
+    }
+
+    return e;
+}
+
+Matrix Matrix::extractCol(int j) const {
+    int m = numRows();
+    int n = numCols();
+
+    Matrix c(numRows(), 1);
+
+    for (int i = 1; i < m; ++i) {
+        c.get(i, 1) = get(i, j);
+    }
+
+    return c;
+}
+
+void Matrix::print() const {
+    int m = numRows();
+    int n = numCols();
+
+    std::cerr.precision(6);
+
+    for (int i = 1; i <= m; ++i) {
+        std::cerr << "[ ";
+        for (int j = 1; j <= n; ++j) {
+            std::cerr << std::setw(6) << get(i, j) << " ";
+        }
+        std::cerr << "]" << std::endl;
+    }
+
+    std::cerr << std::endl;
+}
+
+
+Matrix gauss(const Matrix & a, const Matrix & b) {
+    Matrix ab = a.extend(b);
+
+    int m = ab.numRows();
+
+    for (int i = 1; i <= m; ++i) {
+        ab.scaleRow(i, 1./ ab.get(i, i));
+        for (int k = 1; k <= m; ++k) {
+            if (k != i) {
+                double aki = ab.get(k, i);
+                ab.combineRows(k, i, -aki);
+            }
+        }
+    }
+
+    return ab.extractCol(ab.numCols());
+}
 
 double xj(int j, const vector<double> & X) {
     return X[j - 1];
@@ -192,4 +323,3 @@ int main(int argc, const char *argv[]) {
     }
     return 0;
 }
-
