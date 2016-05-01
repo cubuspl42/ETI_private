@@ -3,6 +3,9 @@ Debug/
 *.pyc
 __pycache__/
 *.zip
+.idea
+out/
+.ipynb_checkpoints/
 
 *.opensdf
 *.sdf
