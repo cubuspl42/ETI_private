@@ -89,19 +89,19 @@ Matrix Matrix::extractCol(int j) const {
     return c;
 }
 
-void Matrix::print() {
+void Matrix::print() const {
     int m = numRows();
     int n = numCols();
 
-    std::cout.precision(6);
+    std::cerr.precision(6);
 
     for (int i = 1; i <= m; ++i) {
-        std::cout << "[ ";
+        std::cerr << "[ ";
         for (int j = 1; j <= n; ++j) {
-            std::cout << std::setw(6) << get(i, j) << " ";
+            std::cerr << std::setw(6) << get(i, j) << " ";
         }
-        std::cout << "]" << std::endl;
+        std::cerr << "]" << std::endl;
     }
 
-    std::cout << std::endl;
+    std::cerr << std::endl;
 }

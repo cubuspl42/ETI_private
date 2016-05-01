@@ -5,16 +5,23 @@ import numpy as np
 import sh
 import json
 
+from math import log10
 from os import path
+from IPython.core.display import display, HTML
 
 pl.init_notebook_mode()
 
-bin_path = path.join(__file__, 'out/mn3')
+bin_path = path.join(path.dirname(path.realpath(__file__)), 'out/mn3')
 
-K = 256
+rys_i = 0
+
+def rys(desc):
+    global rys_i
+    rys_i += 1
+    return 'Rys. ' + str(rys_i) + '. ' + desc
 
 def dump(A):
-    ' '.join(map(str, A))
+    return ' '.join(map(str, A))
 
 def mn3(X, Y, N):
     assert len(X) == len(Y)
@@ -26,34 +33,52 @@ def mn3(X, Y, N):
     ]
     _in = '\n'.join(lines)
     cmd = sh.Command(bin_path)
-    out = cmd(n, _in=_in)
-    return json.loads(out)
+    out = cmd(_in=_in)
+    j = json.loads(str(out))
+    return (j[0], j[1])
 
-X = np.arange(1, K, 1)
-
-def title(t, i, a):
-    t + '\n'*2 + "Rys. " + str(i) + " " + a
-
-def plot_spline_n(X, Y, N):
+def _plot(X, Y, X2, Y2, desc, s21, yax):
     assert len(X) == len(Y)
 
-    data = go.Scatter(
+    data1 = go.Scatter(
         x = X,
-        y = mn3(X, Y, N),
-        mode = 'lines+markers',
-        name = 'Data'
+        y = Y,
+        mode = 'lines',
+        name = s21
+    )
+
+    data2 = go.Scatter(
+        x = X2,
+        y = Y2,
+        mode = 'lines',
+        name = s21 + ' (interpolowane)'
     )
     
     layout = go.Layout(
-        title='Błąd względny (' + mt + ')',
+        title='Charakterystyka transmisji',
         width=960,
         height=720,
-        #hovermodcd e='closest',
-        xaxis=dict(title='n'),
-        # yaxis=dict(title='Błąd względny', type='log', autorange=True),
-        yaxis=dict(title='Błąd względny'),
+        xaxis=dict(title='Freq [GHz]'),
+        yaxis=dict(title=yax),
     )
     
-    fig = go.Figure(data=[data], layout=layout)
+    fig = go.Figure(data=[data1, data2], layout=layout)
     
     pl.iplot(fig, show_link=False)
+
+    display(HTML('<center>' + rys(desc) + '</center><br><br><br>'))
+
+def plot(X, Y, N):
+    X2, Y2 = mn3(X, Y, N)
+    desc = 'Wykres zadanej funkcji w formie dyskretnej oraz interpolowanej (' + str(N) + ' wartości)'
+    _plot(X, Y, X2, Y2, desc, 'S21', '')
+
+def plot_db(X, Y, N):
+    def S21_dB(x):
+        # x = abs(x) + 0.0001
+        return 20*log10(x)
+    X2, Y2 = mn3(X, Y, N)
+    Y = list(map(S21_dB, Y))
+    Y2 = list(map(S21_dB, Y2))
+    desc = 'Wykres logarytmiczny zadanej funkcji w formie dyskretnej oraz interpolowanej (' + str(N) + ' wartości)'
+    _plot(X, Y, X2, Y2, desc, 'S21_dB', '[dB]')

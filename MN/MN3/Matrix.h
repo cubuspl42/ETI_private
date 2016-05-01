@@ -34,7 +34,7 @@ public:
 
     Matrix extractCol(int j) const;
 
-    void print();
+    void print() const;
 
 };
 
