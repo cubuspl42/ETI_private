@@ -421,7 +421,7 @@ int main(int argc, const char *argv[]) {
 
     cout << endl;
     cout << "Number of reads/writes: " << metrics.n_reads << "/" << metrics.n_writes << endl;
-    cout << "Max. number of tapes: " << metrics.n_tapes << endl;
+    cout << "Max. number of tapes: " << metrics.max_tapes << endl;
 
     return 0;
 }
