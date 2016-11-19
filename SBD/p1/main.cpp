@@ -12,6 +12,8 @@
 
 using namespace std;
 
+const int rand_max = 16;
+
 void nullprintf(...) {
 }
 
@@ -21,6 +23,15 @@ void nullprintf(...) {
 #else
 #define dprintf nullprintf
 #endif
+
+struct Config {
+    int n_rand = 0;
+    string filename;
+    unsigned b = 1024;
+    unsigned n = 4096;
+};
+
+Config cfg;
 
 struct Metrics {
     int n_reads = 0;
@@ -32,12 +43,12 @@ struct Metrics {
 Metrics metrics;
 
 struct Record {
-    int a0;
-    int a1;
-    int a2;
-    int a3;
-    int a4;
-    int x;
+    int64_t a0;
+    int64_t a1;
+    int64_t a2;
+    int64_t a3;
+    int64_t a4;
+    int64_t x;
 };
 
 int64_t g(Record r) {
@@ -55,18 +66,13 @@ bool operator<(Record a, Record b) {
     return y1 < y2;
 }
 
-// const int b = 1024;
-// const int n = 4096;
-
-const int b = 4;
-const int n = 4;
-
+const Record r_min {INT_MIN, INT_MIN, INT_MIN, INT_MIN, INT_MIN, INT_MIN};
 const Record r_max {INT_MAX, INT_MAX, INT_MAX, INT_MAX, INT_MAX, INT_MAX};
 
 struct Buffer {
-    Record *records;
-    size_t capacity;
-    size_t size;
+    Record *records = nullptr;
+    size_t capacity = 0;
+    size_t size = 0;
 };
 
 int fpeek(FILE *stream)
@@ -114,7 +120,7 @@ struct Reader {
     Buffer buf;
     int p = 0;
 
-    Reader(Tape &tape, Buffer buf) : tape(tape), buf(buf) {
+    Reader(Tape &_tape, Buffer _buf) : tape(_tape), buf(_buf) {
         tape.reset();
         tape.read(buf);
     }
@@ -147,21 +153,19 @@ struct Reader {
 struct Writer {
     Tape &tape;
     Buffer buf;
-    int p = 0;
 
     Writer(Tape &tape, Buffer buf) : tape(tape), buf(buf) {
+        assert(buf.capacity > 0);
         tape.reset();
     }
 
     void write(Record r) {
-        if(p < (int) buf.size) {
-            buf.records[p++] = r;
-        } else {
-            assert(p == (int) buf.size);
+        if(buf.size >= buf.capacity) {
+            assert(buf.size == buf.capacity);
             tape.write(buf);
-            p = 0;
-            buf.records[p++] = r;
+            buf.size = 0;
         }
+        buf.records[buf.size++] = r;
     }
 
     void close() {
@@ -171,17 +175,20 @@ struct Writer {
 
 bool tape_sorted(Tape &t, Buffer buf) {
     Reader rd(t, buf);
-    Record prev = rd.peek();
+    int64_t g_prev = INT64_MIN;
     while(rd.more()) {
-        if(rd.read() < prev) {
+        Record r = rd.read();
+        int64_t g_r = g(r);
+        if(g_r < g_prev) {
             return false;
         }
+        g_prev = g_r;
     }
     return true;
 }
 
 Buffer make_big_buf(vector<Record> &opmem) {
-    assert(opmem.size() == n * b);
+    assert(opmem.size() == cfg.n * cfg.b);
     Buffer p;
     p.records = opmem.data();
     p.capacity = opmem.size();
@@ -204,24 +211,27 @@ void print_record_n(Record r) {
     cout << endl;
 }
 
-void print_buf(Buffer buf) {
-    cout << "[";
-    for(int i = 0; i < (int) buf.size; ++i) {
-        print_record(buf.records[i]);
-        cout << " ";
+void print_tape(Tape &t, Buffer buf) {
+    Reader rd(t, buf);
+    cout << "[" << endl;
+    while(rd.more()) {
+        Record r = rd.read();
+        print_record_n(r);
     }
     cout << "]" << endl;
 }
 
-Tape sort_head(vector<Record> &opmem, Tape &t) {
-    dprintf("> sort_head\n");
+Tape sort_head_inmem(vector<Record> &opmem, Tape &t) {
+    dprintf("> sort_head_inmem\n");
     Buffer buf = make_big_buf(opmem);
     t.read(buf);
-    print_buf(buf);
     sort(buf.records, buf.records + buf.size);
-    print_buf(buf);
     Tape t2;
     t2.write(buf);
+
+    cout << "Sorting (n * b) records in memory:" << endl;
+    print_tape(t2, buf);
+
     return t2;
 }
 
@@ -230,19 +240,25 @@ vector<Tape> make_series(vector<Record> &opmem, Tape &t) {
     t.reset();
     vector<Tape> series;
     while(t.more()) {
-        series.push_back(sort_head(opmem, t));
+        series.push_back(sort_head_inmem(opmem, t));
     }
     return series;
 }
 
 Record min_record(vector<Reader> &readers) {
-    Record recm = r_max;
+    int64_t g_rmin = INT64_MAX;
+    Reader *rd_rmin = nullptr;
     for(Reader &r: readers) {
         if(r.more()) {
-            recm = min(recm, r.peek());
+            Record rec = r.peek();
+            if(g(rec) < g_rmin) {
+                g_rmin = g(rec);
+                rd_rmin = &r;
+            }
         }
     }
-    return recm;
+    assert(rd_rmin && g_rmin < INT64_MAX);
+    return rd_rmin->read();
 }
 
 void merge(vector<Reader> readers, Writer &writer) {
@@ -263,23 +279,10 @@ vector<Reader> make_readers(const vector<Buffer> &pages, vector<Tape> &series, s
     return readers;
 }
 
-void print_tape(Tape &t, Buffer buf) {
-    Reader rd(t, buf);
-    cout << "/";
-    while(rd.more()) {
-        Record r = rd.read();
-        print_record(r);
-        cout << " ";
-    }
-    cout << "/" << endl;
-}
-
 Tape merge_head(const vector<Buffer> &pages, vector<Tape> &series, size_t i, size_t m) {
     dprintf("> merge_head\n");
-    for(Tape &t : series) {
-        print_tape(t, pages.front());
-        assert(tape_sorted(t, pages.front()));
-    }
+    cout << "Merging (n - 1) series:" << endl;
+
     vector<Reader> readers = make_readers(pages, series, i, m);
     Tape tape;
     Writer writer(tape, pages.back());
@@ -288,14 +291,16 @@ Tape merge_head(const vector<Buffer> &pages, vector<Tape> &series, size_t i, siz
     writer.close();
     assert(tape_sorted(tape, pages.front()));
 
+    print_tape(tape, pages.front());
+
     return tape;
 }
 
 vector<Tape> merge_all(const vector<Buffer> &pages, vector<Tape> &series) {
     dprintf("> merge_all\n");
     vector<Tape> all;
-    for(size_t i = 0; i < series.size(); i += (n - 1)) {
-        size_t m = min((size_t) n - 1, series.size() - i);
+    for(size_t i = 0; i < series.size(); i += (cfg.n - 1)) {
+        size_t m = min((size_t) cfg.n - 1, series.size() - i);
         all.push_back(merge_head(pages, series, i, m));
     }
     return all;
@@ -304,15 +309,15 @@ vector<Tape> merge_all(const vector<Buffer> &pages, vector<Tape> &series) {
 Buffer make_buf(Record *records, size_t size) {
    Buffer page;
    page.records = records;
-   page.capacity = page.size = size;
+   page.capacity = size;
    return page;
 }
 
 vector<Buffer> make_pages(vector<Record> &opmem) {
-    assert(opmem.size() == n * b);
+    assert(opmem.size() == cfg.n * cfg.b);
     vector<Buffer> pages;
-    for(int i = 0; i < n; ++i) {
-        Buffer page = make_buf(opmem.data() + i * b, b);
+    for(unsigned i = 0; i < cfg.n; ++i) {
+        Buffer page = make_buf(opmem.data() + i * cfg.b, cfg.b);
         pages.push_back(page);
     }
     return pages;
@@ -342,40 +347,69 @@ void read_stdin(Tape &t, istream &is, Buffer buf) {
     read_input(t, cin, buf);
 }
 
-void read_file(Tape &t, const char *filename, Buffer buf) {
+void read_file(Tape &t, string filename, Buffer buf) {
     ifstream ifs(filename);
     assert(ifs.good());
-    read_input(t, cin, buf);
+    read_input(t, ifs, buf);
+}
+
+int rnd() {
+    return rand() % rand_max;
 }
 
 void make_random_input(Tape &t, Buffer buf) {
     Writer writer(t, buf);
-    const int n_rand = 128;
-    for(int i = 0; i < n_rand; ++i) {
-        Record r {rand(), rand(), rand(), rand(), rand(), rand()};
+    for(int i = 0; i < cfg.n_rand; ++i) {
+        Record r {rnd(), rnd(), rnd(), rnd(), rnd(), rnd()};
         writer.write(r);
     }
     writer.close();
 }
 
-int main(int argc, const char *argv[]) {
-    vector<Record> opmem(n * b);
-    Buffer buf0 = make_buf(opmem.data(), b);
-
-    Tape t;
-//    make_random_input(t, buf0);
-    read_input(t, cin, buf0);
-
-    print_tape(t, buf0);
-
-    vector<Tape> tapes = make_series(opmem, t);
-    for(Tape &tt : tapes) {
-        print_tape(tt, buf0);
-        assert(tape_sorted(tt, buf0));
+void parse_argv(int argc, const char **argv) {
+    for(int i = 0; i < argc; ++i) {
+        if(i < argc - 1) {
+            if(string{argv[i]} == "-r") cfg.n_rand = atoi(argv[i+1]);
+            if(string{argv[i]} == "-f") cfg.filename = argv[i+1];
+            if(string{argv[i]} == "-b") cfg.b = atoi(argv[i+1]);
+            if(string{argv[i]} == "-n") cfg.n = atoi(argv[i+1]);
+        }
     }
+}
+/**
+ * Flags:
+ * -r <n> -- generate <n> random records
+ * -f <filename> -- read input from file <filename>
+ * -b <value> -- specify records/page number
+ * -n <value> -- specify number of buffers
+ */
+int main(int argc, const char *argv[]) {
+    parse_argv(argc, argv);
+
+    vector<Record> opmem(cfg.n * cfg.b);
+    Buffer buf0 = make_buf(opmem.data(), cfg.b);
+
+    Tape in_t;
+    if(cfg.filename.size()) {
+        read_file(in_t, cfg.filename, buf0);
+    } else if(cfg.n_rand) {
+        make_random_input(in_t, buf0);
+    } else {
+        read_input(in_t, cin, buf0);
+    }
+
+    cout << "==== Input tape before sorting: ====" << endl;
+    print_tape(in_t, buf0);
+
+    cout << "==== Phase 1: in-memory sorting ====" << endl;
+    vector<Tape> tapes = make_series(opmem, in_t);
+
+    cout << "==== Phase 2: merging series ====" << endl;
     Tape t2 = merge_series(opmem, move(tapes));
-    print_tape(t2, buf0);
     assert(tape_sorted(t2, buf0));
+
+    cout << "==== Final tape: ====" << endl;
+    print_tape(t2, buf0);
 
     cout << endl;
     cout << "Number of reads/writes: " << metrics.n_reads << "/" << metrics.n_writes << endl;
