@@ -4,6 +4,7 @@
 #include <iostream>
 #include <tuple>
 #include <vector>
+#include <climits>
 
 using namespace std;
 
@@ -39,6 +40,8 @@ struct Record {
 
 const int b = 4;
 const int n = 4;
+
+const Record r_max {INT_MAX, INT_MAX, INT_MAX, INT_MAX, INT_MAX, INT_MAX};
 
 struct Page {
     Record *records;
@@ -81,27 +84,26 @@ struct Reader {
 
     bool more() const {
         return p < (int) buf.size || tape.more();
-    }    
+    }
 
-    Record read() {
-        if(p < (int) buf.size) {
-            return buf.records[p++];
-        } else {
-            read_page(tape, buf);            
+    void _read_page() {
+        assert(more());
+        assert(p <= (int) buf.size);
+        if(p >= (int) buf.size) {
+            read_page(tape, buf);
             assert(buf.size > 0);
             p = 0;
-            return buf.records[p++];
         }
     }
 
-    Record peek() const {
-        if(p < (int) buf.size) {
-            return buf.records[p];
-        } else {
-            Record r;
-            fread(&r, sizeof(Record), 1, tape.file); // TODO: it's not peek
-            return r;
-        }
+    Record read() {
+        _read_page();
+        return buf.records[p++];
+    }
+
+    Record peek() {
+        _read_page();
+        return buf.records[p];
     }
 };
 
@@ -131,6 +133,17 @@ struct Writer {
     }
 };
 
+bool tape_sorted(Tape &t, Page buf) {
+    Reader rd(t, buf);
+    Record prev = rd.peek();
+    while(rd.more()) {
+        if(rd.read() < prev) {
+            return false;
+        }
+    }
+    return true;
+}
+
 template <typename C, typename P>
 C filter(C const & container, P pred) {
     C filtered(container);
@@ -141,7 +154,7 @@ C filter(C const & container, P pred) {
 template <typename C, typename F>
 auto argmin(C container, F f) -> decltype(*container.begin()) {
     using T = typename C::value_type;
-    auto it = min_element(container.begin(), container.end(), [=](const T& a, const T& b) {
+    auto it = min_element(container.begin(), container.end(), [=](T& a, T& b) {
         auto c = f(a);
         auto d = f(b);
         return c < d;        
@@ -176,6 +189,11 @@ void print_record(Record r) {
     cout << r.a0; //  << "." << r.a0 << "." << r.a1 << "." << r.a2 << "." << r.a3 << "." << r.a4 << "." << r.x;
 }
 
+void print_record_n(Record r) {
+    print_record(r);
+    cout << endl;
+}
+
 void print_buf(Page buf) {
     cout << "[";
     for(int i = 0; i < (int) buf.size; ++i) {
@@ -206,20 +224,33 @@ vector<Tape> make_series(vector<Record> &opmem, Tape &t) {
     return series;
 }
 
+Reader &min_reader(vector<Reader> &readers) {
+    dprintf("> min_reader\n");
+    Reader *rm = NULL;
+    Record recm = r_max;
+    for(Reader &r: readers) {
+        if(r.more()) {
+            Record rec = r.peek();
+            print_record_n(rec);
+            if(rec < recm) {
+                rm = &r;
+                recm = rec;
+            }
+        }
+    }
+    assert(rm);
+    dprintf("< min_reader\n");
+    return *rm;
+}
+
 void merge(vector<Reader> readers, Writer &writer) {
     dprintf("> merge\n");
-    while(!readers.empty()) {
-        readers = filter(readers, [=](const Reader &r) {
-            return !r.more();
-        });
-        if(!readers.empty()) {
-            Reader &rm = argmin(readers, [=](const Reader &r) {
-                return r.peek();
-            });
-            print_record(rm.peek());
-            cout << endl;
-            writer.write(rm.read());
-        }
+    while(std::any_of(readers.begin(), readers.end(), [=](const Reader &r){
+        return r.more();
+    })) {
+        Reader &rm = min_reader(readers);
+        print_record_n(rm.peek());
+        writer.write(rm.read());
     }
 }
 
@@ -231,16 +262,35 @@ vector<Reader> make_readers(const vector<Page> &pages, const vector<Tape> &serie
     return readers;
 }
 
-Tape merge_head(const vector<Page> &pages, const vector<Tape> &series, size_t i, size_t m) {
+void print_tape(Tape &t, Page buf) {
+    Reader rd(t, buf);
+    cout << "/";
+    while(rd.more()) {
+        Record r = rd.read();
+        print_record(r);
+        cout << " ";
+    }
+    cout << "/" << endl;
+}
+
+Tape merge_head(const vector<Page> &pages, vector<Tape> &series, size_t i, size_t m) {
     dprintf("> merge_head\n");
+    for(Tape &t : series) {
+        print_tape(t, pages.front());
+        assert(tape_sorted(t, pages.front()));
+    }
     vector<Reader> readers = make_readers(pages, series, i, m);
     Tape tape = make_tape();
     Writer writer(tape, pages.back());
     merge(readers, writer);
+
+    Tape wt = writer.release();
+    assert(tape_sorted(wt, pages.front()));
+
     return writer.release();
 }
 
-vector<Tape> merge_all(const vector<Page> &pages, const vector<Tape> &series) {
+vector<Tape> merge_all(const vector<Page> &pages, vector<Tape> &series) {
     dprintf("> merge_all\n");
     vector<Tape> all;
     for(size_t i = 0; i < series.size(); i += (n - 1)) {
@@ -271,21 +321,10 @@ Tape merge_series(vector<Record> &opmem, vector<Tape> series) {
     dprintf("> merge_series\n");
     while(series.size() > 1) {
         vector<Page> pages = make_pages(opmem);
-        series = merge_all(pages, move(series));
+        series = merge_all(pages, series);
     }
     assert(series.size() == 1);
     return move(series.front());
-}
-
-void print_tape(Tape &t, Page buf) {
-    Reader rd(t, buf);
-    cout << "/";
-    while(rd.more()) {
-        Record r = rd.read();
-        print_record(r);
-        cout << " ";
-    }
-    cout << "/" << endl;
 }
 
 int main(int argc, const char *argv[]) {
@@ -295,9 +334,13 @@ int main(int argc, const char *argv[]) {
     vector<Record> opmem(n * b);
     Page buf0 = make_buf(opmem.data(), b);
     vector<Tape> tapes = make_series(opmem, t);
-    for(Tape &t : tapes) print_tape(t, buf0);
+    for(Tape &tt : tapes) {
+        print_tape(tt, buf0);
+        assert(tape_sorted(tt, buf0));
+    }
     Tape t2 = merge_series(opmem, move(tapes));
     print_tape(t2, buf0);
+    assert(tape_sorted(t2, buf0));
 
     return 0;
 }
