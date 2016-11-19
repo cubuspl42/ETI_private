@@ -17,7 +17,7 @@ const int rand_max = 16;
 void nullprintf(...) {
 }
 
-#define DBG 1
+#define DBG 0
 #if DBG
 #define dprintf printf
 #else
@@ -29,6 +29,7 @@ struct Config {
     string filename;
     unsigned b = 1024;
     unsigned n = 4096;
+    bool print_intermediate = false;
 };
 
 Config cfg;
@@ -229,8 +230,10 @@ Tape sort_head_inmem(vector<Record> &opmem, Tape &t) {
     Tape t2;
     t2.write(buf);
 
-    cout << "Sorting (n * b) records in memory:" << endl;
-    print_tape(t2, buf);
+    if(cfg.print_intermediate) {
+        cout << "Sorting (n * b) records in memory:" << endl;
+        print_tape(t2, buf);
+    }
 
     return t2;
 }
@@ -281,7 +284,7 @@ vector<Reader> make_readers(const vector<Buffer> &pages, vector<Tape> &series, s
 
 Tape merge_head(const vector<Buffer> &pages, vector<Tape> &series, size_t i, size_t m) {
     dprintf("> merge_head\n");
-    cout << "Merging (n - 1) series:" << endl;
+
 
     vector<Reader> readers = make_readers(pages, series, i, m);
     Tape tape;
@@ -291,7 +294,10 @@ Tape merge_head(const vector<Buffer> &pages, vector<Tape> &series, size_t i, siz
     writer.close();
     assert(tape_sorted(tape, pages.front()));
 
-    print_tape(tape, pages.front());
+    if(cfg.print_intermediate) {
+        cout << "Merging (n - 1) series:" << endl;
+        print_tape(tape, pages.front());
+    }
 
     return tape;
 }
@@ -368,6 +374,7 @@ void make_random_input(Tape &t, Buffer buf) {
 
 void parse_argv(int argc, const char **argv) {
     for(int i = 0; i < argc; ++i) {
+        if(string{argv[i]} == "-p") cfg.print_intermediate = true;
         if(i < argc - 1) {
             if(string{argv[i]} == "-r") cfg.n_rand = atoi(argv[i+1]);
             if(string{argv[i]} == "-f") cfg.filename = argv[i+1];
@@ -382,6 +389,7 @@ void parse_argv(int argc, const char **argv) {
  * -f <filename> -- read input from file <filename>
  * -b <value> -- specify records/page number
  * -n <value> -- specify number of buffers
+ * -p -- print intermediate states
  */
 int main(int argc, const char *argv[]) {
     parse_argv(argc, argv);
