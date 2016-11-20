@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <memory>
 #include <fstream>
+#include <cmath>
 
 using namespace std;
 
@@ -35,6 +36,7 @@ struct Config {
 Config cfg;
 
 struct Metrics {
+    bool enabled = false;
     int n_reads = 0;
     int n_writes = 0;
     int n_tapes = 0;
@@ -42,6 +44,14 @@ struct Metrics {
 };
 
 Metrics metrics;
+
+inline long double lg(const long double x){
+    return  log(x) * M_LOG2E;
+}
+
+double rw_estimate(double N, double n, double b) {
+    return (double) ((N / (b * lg(n))) * lg(N / b));
+}
 
 void print_metrics() {
     cout << "Number of reads/writes: " << metrics.n_reads << "/" << metrics.n_writes << endl;
@@ -65,7 +75,6 @@ int64_t g(Record r) {
             r.a3 * r.x * r.x * r.x +
             r.a4 * r.x * r.x * r.x * r.x;
 }
-
 bool operator<(Record a, Record b) {
     int64_t y1 = g(a);
     int64_t y2 = g(b);
@@ -112,12 +121,12 @@ public:
 
     void read(Buffer &page) {
         page.size = fread(page.records, sizeof(Record), page.capacity, file.get());
-        ++metrics.n_reads;
+        if(metrics.enabled) ++metrics.n_reads;
     }
 
     void write(const Buffer &page) {
         fwrite(page.records, sizeof(Record), page.size, file.get());
-        ++metrics.n_writes;
+        if(metrics.enabled) ++metrics.n_writes;
     }
 };
 
@@ -180,16 +189,19 @@ struct Writer {
 };
 
 bool tape_sorted(Tape &t, Buffer buf) {
+    metrics.enabled = false;
     Reader rd(t, buf);
     int64_t g_prev = INT64_MIN;
     while(rd.more()) {
         Record r = rd.read();
         int64_t g_r = g(r);
         if(g_r < g_prev) {
+            metrics.enabled = true;
             return false;
         }
         g_prev = g_r;
     }
+    metrics.enabled = true;
     return true;
 }
 
@@ -218,6 +230,9 @@ void print_record_n(Record r) {
 }
 
 void print_tape(Tape &t, Buffer buf) {
+    assert(metrics.enabled);
+    metrics.enabled = false;
+
     Reader rd(t, buf);
     cout << "[" << endl;
     while(rd.more()) {
@@ -225,6 +240,8 @@ void print_tape(Tape &t, Buffer buf) {
         print_record_n(r);
     }
     cout << "]" << endl;
+
+    metrics.enabled = true;
 }
 
 Tape sort_head_inmem(vector<Record> &opmem, Tape &t) {
@@ -279,18 +296,18 @@ void merge(vector<Reader> readers, Writer &writer) {
     }
 }
 
-vector<Reader> make_readers(const vector<Buffer> &pages, vector<Tape> &series, size_t i, size_t m) {
+vector<Reader> make_readers(const vector<Buffer> &pages, vector<Tape> &series,size_t m) {
     vector<Reader> readers;
     for(size_t j = 0; j < m; ++j) {
-        readers.push_back(Reader(series[i + j], move(pages[j])));
+        readers.push_back(Reader(series[j], move(pages[j])));
     }
     return readers;
 }
 
-Tape merge_head(const vector<Buffer> &pages, vector<Tape> &series, size_t i, size_t m) {
+Tape merge_head(const vector<Buffer> &pages, vector<Tape> &series, size_t m) {
     dprintf("> merge_head\n");
 
-    vector<Reader> readers = make_readers(pages, series, i, m);
+    vector<Reader> readers = make_readers(pages, series, m);
     Tape tape;
     Writer writer(tape, pages.back());
     merge(readers, writer);
@@ -301,6 +318,7 @@ Tape merge_head(const vector<Buffer> &pages, vector<Tape> &series, size_t i, siz
     if(cfg.print_intermediate) {
         cout << "Merging (n - 1) series:" << endl;
         print_tape(tape, pages.front());
+        print_metrics();
     }
 
     return tape;
@@ -309,10 +327,10 @@ Tape merge_head(const vector<Buffer> &pages, vector<Tape> &series, size_t i, siz
 vector<Tape> merge_all(const vector<Buffer> &pages, vector<Tape> &series) {
     dprintf("> merge_all\n");
     vector<Tape> all;
-    for(size_t i = 0; i < series.size(); i += (cfg.n - 1)) {
-        size_t m = min((size_t) cfg.n - 1, series.size() - i);
-        all.push_back(merge_head(pages, series, i, m));
-        auto it = series.begin() + i;
+    while(!series.empty()) {
+        size_t m = min((size_t) cfg.n - 1, series.size());
+        all.push_back(merge_head(pages, series, m));
+        auto it = series.begin();
         series.erase(it, it + m);
     }
     return all;
@@ -337,45 +355,49 @@ vector<Buffer> make_pages(vector<Record> &opmem) {
 
 Tape merge_series(vector<Record> &opmem, vector<Tape> series) {
     dprintf("> merge_series\n");
+    int cycle_no = 0;
     while(series.size() > 1) {
         vector<Buffer> pages = make_pages(opmem);
         series = merge_all(pages, series);
+
+        cout << "End of cycle " << ++cycle_no << "; " << series.size() << " series" << endl;
+        print_metrics();
     }
     assert(series.size() == 1);
     return move(series.front());
 }
 
-void read_input(Tape &t, istream &is, Buffer buf) {
+int read_input(Tape &t, istream &is, Buffer buf) {
     Writer writer(t, buf);
+    int n = 0;
     while(is.good()) {
         Record r;
         read_record(r, is);
         writer.write(r);
+        ++n;
     }
     writer.close();
+    return n;
 }
 
-void read_stdin(Tape &t, istream &is, Buffer buf) {
-    read_input(t, cin, buf);
-}
-
-void read_file(Tape &t, string filename, Buffer buf) {
+int read_file(Tape &t, string filename, Buffer buf) {
     ifstream ifs(filename);
     assert(ifs.good());
-    read_input(t, ifs, buf);
+    return read_input(t, ifs, buf);
 }
 
 int rnd() {
     return rand() % rand_max;
 }
 
-void make_random_input(Tape &t, Buffer buf) {
+int make_random_input(Tape &t, Buffer buf) {
     Writer writer(t, buf);
     for(int i = 0; i < cfg.n_rand; ++i) {
         Record r {rnd(), rnd(), rnd(), rnd(), rnd(), rnd()};
         writer.write(r);
     }
     writer.close();
+    return cfg.n_rand;
 }
 
 void parse_argv(int argc, const char **argv) {
@@ -405,14 +427,18 @@ int main(int argc, const char *argv[]) {
     Buffer buf0 = make_buf(opmem.data(), cfg.b);
 
     Tape in_t;
+    int N = -1;
     if(cfg.filename.size()) {
-        read_file(in_t, cfg.filename, buf0);
+        N = read_file(in_t, cfg.filename, buf0);
     } else if(cfg.n_rand) {
-        make_random_input(in_t, buf0);
+        N = make_random_input(in_t, buf0);
     } else {
-        read_input(in_t, cin, buf0);
+        N = read_input(in_t, cin, buf0);
     }
 
+    metrics.enabled = true;
+
+    cout << "**** N = " << N << ", n = " << cfg.n << ", b = " << cfg.b << " ****" << endl;
     cout << "==== Input tape before sorting: ====" << endl;
     print_tape(in_t, buf0);
 
@@ -423,6 +449,7 @@ int main(int argc, const char *argv[]) {
     print_metrics();
 
     cout << "==== Phase 2: merging series ====" << endl;
+    print_metrics();
     Tape t2 = merge_series(opmem, move(tapes));
     assert(tape_sorted(t2, buf0));
 
@@ -431,6 +458,8 @@ int main(int argc, const char *argv[]) {
 
     cout << endl;
 
+    double e = rw_estimate(N, cfg.n, cfg.b);
+    cout << "Estimated (theoretic) number of read/writes: " << e << "/" << e << endl;
     print_metrics();
 
     return 0;
