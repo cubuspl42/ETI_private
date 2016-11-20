@@ -62,8 +62,8 @@ int64_t g(Record r) {
             r.a0 +
             r.a1 * r.x +
             r.a2 * r.x * r.x +
-            r.a3 * r.x * r.x * r.x * r.x +
-            r.a4 * r.x * r.x * r.x * r.x * r.x;
+            r.a3 * r.x * r.x * r.x +
+            r.a4 * r.x * r.x * r.x * r.x;
 }
 
 bool operator<(Record a, Record b) {
