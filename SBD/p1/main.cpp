@@ -43,6 +43,11 @@ struct Metrics {
 
 Metrics metrics;
 
+void print_metrics() {
+    cout << "Number of reads/writes: " << metrics.n_reads << "/" << metrics.n_writes << endl;
+    cout << "Max. number of tapes: " << metrics.max_tapes << endl;
+}
+
 struct Record {
     int64_t a0;
     int64_t a1;
@@ -238,12 +243,12 @@ Tape sort_head_inmem(vector<Record> &opmem, Tape &t) {
     return t2;
 }
 
-vector<Tape> make_series(vector<Record> &opmem, Tape &t) {
+vector<Tape> make_series(vector<Record> &opmem, Tape in_t) {
     dprintf("> make_series\n");
-    t.reset();
+    in_t.reset();
     vector<Tape> series;
-    while(t.more()) {
-        series.push_back(sort_head_inmem(opmem, t));
+    while(in_t.more()) {
+        series.push_back(sort_head_inmem(opmem, in_t));
     }
     return series;
 }
@@ -285,7 +290,6 @@ vector<Reader> make_readers(const vector<Buffer> &pages, vector<Tape> &series, s
 Tape merge_head(const vector<Buffer> &pages, vector<Tape> &series, size_t i, size_t m) {
     dprintf("> merge_head\n");
 
-
     vector<Reader> readers = make_readers(pages, series, i, m);
     Tape tape;
     Writer writer(tape, pages.back());
@@ -308,6 +312,8 @@ vector<Tape> merge_all(const vector<Buffer> &pages, vector<Tape> &series) {
     for(size_t i = 0; i < series.size(); i += (cfg.n - 1)) {
         size_t m = min((size_t) cfg.n - 1, series.size() - i);
         all.push_back(merge_head(pages, series, i, m));
+        auto it = series.begin() + i;
+        series.erase(it, it + m);
     }
     return all;
 }
@@ -383,6 +389,7 @@ void parse_argv(int argc, const char **argv) {
         }
     }
 }
+
 /**
  * Flags:
  * -r <n> -- generate <n> random records
@@ -410,7 +417,10 @@ int main(int argc, const char *argv[]) {
     print_tape(in_t, buf0);
 
     cout << "==== Phase 1: in-memory sorting ====" << endl;
-    vector<Tape> tapes = make_series(opmem, in_t);
+    vector<Tape> tapes = make_series(opmem, move(in_t));
+
+    cout << "~~~~ Number of series: " << tapes.size() << endl;
+    print_metrics();
 
     cout << "==== Phase 2: merging series ====" << endl;
     Tape t2 = merge_series(opmem, move(tapes));
@@ -420,8 +430,8 @@ int main(int argc, const char *argv[]) {
     print_tape(t2, buf0);
 
     cout << endl;
-    cout << "Number of reads/writes: " << metrics.n_reads << "/" << metrics.n_writes << endl;
-    cout << "Max. number of tapes: " << metrics.max_tapes << endl;
+
+    print_metrics();
 
     return 0;
 }
