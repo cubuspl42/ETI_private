@@ -54,7 +54,7 @@ double rw_estimate(double N, double n, double b) {
 }
 
 void print_metrics() {
-    cout << "Number of reads/writes: " << metrics.n_reads << "/" << metrics.n_writes << endl;
+    cout << "Number of reads+writes: " << metrics.n_reads + metrics.n_writes << endl;
     cout << "Max. number of tapes: " << metrics.max_tapes << endl;
 }
 
@@ -459,7 +459,7 @@ int main(int argc, const char *argv[]) {
     cout << endl;
 
     double e = rw_estimate(N, cfg.n, cfg.b);
-    cout << "Estimated (theoretic) number of read/writes: " << e << "/" << e << endl;
+    cout << "Estimated (theoretic) number of reads+writes: " << e * 2 << endl;
     print_metrics();
 
     return 0;
