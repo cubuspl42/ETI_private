@@ -35,6 +35,16 @@ void die(string message) {
     std::exit(1);
 }
 
+vector<Record> read_records(istream &is, int n) {
+    vector<Record> v;
+    for(int i = 0; i < n; ++i) {
+        Record r;
+        is >> r;
+        v.push_back(r);
+    }
+    return v;
+}
+
 void exec_commands(IndexedFile &idf, istream &is_cmd) {
     while(is_cmd.good()) {
         string cmd;
@@ -44,12 +54,24 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
             Record r;
             is_cmd >> r;
             assert(!is_cmd.fail());
-
             cout << "INSERT " << r << endl;
+            idf.insert(r);
+        } else if(cmd == "check") {
+            int n;
+            is_cmd >> n;
+            vector<Record> v_e = read_records(is_cmd, n);
+            vector<Record> v_a = idf.to_vector();
+            cout << "check: " << (v_e == v_a ? "ok" : "fail") << endl;
+        } else if(cmd == "print") {
+            cout << "print:" << endl;
+            idf.for_each([&](Record r) {
+                cout << r << endl;
+            });
         } else {
             die("Invalid command: " + cmd);
         }
     }
+    assert(!is_cmd.fail());
 }
 
 void parse_argv(int argc, const char **argv) {

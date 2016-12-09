@@ -16,11 +16,10 @@ enum CompensateStatus {
 /**
  * BIndex ?
  */
-template<typename K, typename V>
 class IndexFile {
     PagedFile pgf;
     int s = NIL;
-    int d = 0; // FIXME
+    int d = 2; // FIXME
 
     /**
      * @param p initial page index
@@ -29,13 +28,17 @@ class IndexFile {
      */
     pair<int, int> _find(int p, int x);
 
-    InsertStatus _insert(int p, int x, int a);
+    void _insert(int p, BEntry e);
 
     CompensateStatus _compensate(int p);
 
     void _split(int p);
 
+    void _for_each(int p, function<void(pair<int, int>)> f);
+
 public:
+    IndexFile(string path) : pgf(path, 2*d) {
+    }
 
     /**
      * Find element
@@ -56,6 +59,8 @@ public:
      * @param x key
      */
     void remove(int x);
+
+    void for_each(function<void(pair<int, int>)> f);
 };
 
 #endif //P2_INDEXFILE_H

@@ -1,0 +1,29 @@
+//
+// Created by kuba on 09.12.16.
+//
+
+#include "ContentFile.h"
+
+#include <cassert>
+
+ContentFile::ContentFile(string path) : file{fopen(path.c_str(), "wb+"), file_close} {
+
+}
+
+Record ContentFile::read_record(int i) {
+    fseek(file.get(), sizeof(Record) * i, SEEK_SET);
+    Record r;
+    fread(&r, sizeof(Record), 1, file.get());
+    return r;
+}
+
+int ContentFile::write_record(Record r) {
+    int rv = fseek(file.get(), 0, SEEK_END);
+    assert(rv == 0);
+    int off = (int) ftell(file.get());
+    assert(off % sizeof(Record) == 0);
+    int a = off / sizeof(Record);
+    int nr = fwrite(&r, sizeof(Record), 1, file.get());
+    assert(nr == 1);
+    return a;
+}

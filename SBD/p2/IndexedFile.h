@@ -4,19 +4,24 @@
 #include "PagedFile.h"
 #include "Record.h"
 #include "IndexFile.h"
+#include "ContentFile.h"
 
 #include <string>
 
 using namespace std;
 
 class IndexedFile {
-    PagedFile pgf;
     IndexFile ixf;
+    ContentFile cf;
 public:
     IndexedFile() = delete;
     IndexedFile(string path);
 
     void insert(Record r);
+
+    void for_each(function<void(Record)> f);
+
+    vector<Record> to_vector();
 };
 
 IndexedFile tmp_indexed_file();
