@@ -5,6 +5,7 @@
 #ifndef P2_INDEXFILE_H
 #define P2_INDEXFILE_H
 
+#include <iostream>
 #include "common.h"
 #include "PagedFile.h"
 
@@ -13,13 +14,15 @@ enum CompensateStatus {
     COMPENSATE_NOT_POSSIBLE
 };
 
+const int D = 2;
+
 /**
  * BIndex ?
  */
 class IndexFile {
     PagedFile pgf;
     int s = NIL;
-    int d = 2; // FIXME
+    int d = D; // FIXME
 
     /**
      * @param p initial page index
@@ -41,8 +44,7 @@ class IndexFile {
     BPage &make_root(BPageBuf buf);
 
 public:
-    IndexFile(string path) : pgf(path, 2*d) {
-    }
+    IndexFile(string path);
 
     /**
      * Find element

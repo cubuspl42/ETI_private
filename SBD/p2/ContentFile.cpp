@@ -7,13 +7,16 @@
 #include <cassert>
 
 ContentFile::ContentFile(string path) : file{fopen(path.c_str(), "wb+"), file_close} {
-
+    cerr << "Loaded content file " << path << endl;
 }
 
 Record ContentFile::read_record(int i) {
-    fseek(file.get(), sizeof(Record) * i, SEEK_SET);
+    int rv;
+    rv = fseek(file.get(), sizeof(Record) * i, SEEK_SET);
+    assert(rv > -1);
     Record r;
-    fread(&r, sizeof(Record), 1, file.get());
+    rv = fread(&r, sizeof(Record), 1, file.get());
+    assert(rv == 1);
     return r;
 }
 

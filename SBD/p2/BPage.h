@@ -65,17 +65,17 @@ public:
 
     BPageBuf(int p0) : _p{p0} {}
 
-    int m() {
+    int m() const {
         assert(_p.size() == _e.size() + 1);
         return (int) _e.size();
     }
 
-    BElement e(int i) {
+    BElement e(int i) const {
         assert(i > 0 && i <= m());
         return _e[i - 1];
     }
 
-    int p(int i) {
+    int p(int i) const {
         assert(i >= 0 && i <= m());
         return _p[i];
     }
@@ -155,6 +155,14 @@ public:
         _e[i - 1] = e;
         assert(is_sorted(_e.begin(), _e.end()));
     }
+
+    const vector<BElement> &ve() const {
+        return _e;
+    }
+
+    const vector<int> &vp() const {
+        return _p;
+    }
 };
 
 class BPage {
@@ -184,6 +192,10 @@ public:
     }
 
     BPageBuf &buf() {
+        return _buf;
+    }
+
+    const BPageBuf &buf() const {
         return _buf;
     }
 };

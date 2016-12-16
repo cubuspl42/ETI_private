@@ -43,7 +43,9 @@ int IndexFile::find(int x) {
     if (s == NIL) {
         return NOT_FOUND;
     }
-    return _find(s, x).second;
+    int rv = _find(s, x).second;
+    pgf.write_back();
+    return rv;
 }
 
 void IndexFile::_insert(int p, BElement e) {
@@ -58,12 +60,13 @@ void IndexFile::_insert(int p, BElement e) {
         }
     }
 
-//    assert(!page_overflows(pg));
+    assert(!page_overflows(pg));
 }
 
 InsertStatus IndexFile::insert(int x, int a) {
     if (s == NIL) {
         make_root(BPageBuf(BElement(x, a)));
+        pgf.write_back();
         return OK;
     }
 
@@ -72,10 +75,12 @@ InsertStatus IndexFile::insert(int x, int a) {
 
     if (ao != NOT_FOUND) {
         assert(ao == a);
+        pgf.write_back();
         return ALREADY_EXISTS;
     }
 
     _insert(p, BElement{x, a});
+    pgf.write_back();
     return OK;
 }
 
@@ -192,6 +197,7 @@ void IndexFile::_for_each(int p, function<void(pair<int, int>)> f) {
 
 void IndexFile::for_each(function<void(pair<int, int>)> f) {
     _for_each(s, f);
+    pgf.write_back();
 }
 
 bool IndexFile::page_overflows(BPage &pg) {
@@ -224,6 +230,10 @@ void IndexFile::_dump(int p) {
 
 void IndexFile::dump() {
     _dump(s);
+}
+
+IndexFile::IndexFile(string path) : pgf(path, 2*D) {
+    cerr << "Loaded index file " << path << endl;
 }
 
 

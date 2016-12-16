@@ -1,3 +1,7 @@
+#include "PagedFile.h"
+#include "Record.h"
+#include "IndexedFile.h"
+
 #include <algorithm>
 #include <cassert>
 #include <cstring>
@@ -10,9 +14,7 @@
 #include <memory>
 #include <fstream>
 #include <math.h>
-#include "PagedFile.h"
-#include "Record.h"
-#include "IndexedFile.h"
+#include <set>
 
 #define DBG 0
 #if DBG
@@ -45,7 +47,20 @@ vector<Record> read_records(istream &is, int n) {
     return v;
 }
 
+vector<Record> set2vec(const set<Record> &s) {
+    vector<Record> v;
+    std::copy(s.begin(), s.end(), std::back_inserter(v));
+    return v;
+}
+
+void check(IndexedFile &idf, const set<Record> &s) {
+    vector<Record> v_e = set2vec(s);
+    vector<Record> v_a = idf.to_vector();
+    cout << "idf-vs-set check: " << (v_e == v_a ? "ok" : "fail") << endl;
+}
+
 void exec_commands(IndexedFile &idf, istream &is_cmd) {
+    set<Record> s;
     while(is_cmd.good()) {
         string cmd;
         is_cmd >> cmd;
@@ -56,6 +71,7 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
             assert(!is_cmd.fail());
             cout << "INSERT " << r << endl;
             idf.insert(r);
+            s.insert(r);
         } else if(cmd == "check") {
             int n;
             is_cmd >> n;
@@ -70,6 +86,7 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
         } else {
             die("Invalid command: " + cmd);
         }
+        check(idf, s);
     }
     assert(!is_cmd.fail());
 }
