@@ -28,6 +28,10 @@ vector<Record> IndexedFile::to_vector() {
     return v;
 }
 
+void IndexedFile::dump() {
+    ixf.dump();
+}
+
 IndexedFile tmp_indexed_file() {
     return IndexedFile(tmpnam(nullptr));
 }

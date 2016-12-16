@@ -64,9 +64,9 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
             cout << "check: " << (v_e == v_a ? "ok" : "fail") << endl;
         } else if(cmd == "print") {
             cout << "print:" << endl;
-            idf.for_each([&](Record r) {
-                cout << r << endl;
-            });
+            idf.for_each([&](Record r) { cout << r << endl; });
+            cout << "dump:" << endl;
+            idf.dump();
         } else {
             die("Invalid command: " + cmd);
         }

@@ -28,13 +28,17 @@ class IndexFile {
      */
     pair<int, int> _find(int p, int x);
 
-    void _insert(int p, BEntry e);
+    void _insert(int p, BElement e);
 
     CompensateStatus _compensate(int p);
 
     void _split(int p);
 
     void _for_each(int p, function<void(pair<int, int>)> f);
+
+    bool page_overflows(BPage &pg);
+
+    BPage &make_root(BPageBuf buf);
 
 public:
     IndexFile(string path) : pgf(path, 2*d) {
@@ -61,6 +65,10 @@ public:
     void remove(int x);
 
     void for_each(function<void(pair<int, int>)> f);
+
+    void _dump(int p);
+
+    void dump();
 };
 
 #endif //P2_INDEXFILE_H

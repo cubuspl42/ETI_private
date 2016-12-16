@@ -1,0 +1,44 @@
+insert 10 0 0 0 0 0
+print
+insert 20 0 0 0 0 0
+print
+insert 30 0 0 0 0 0
+insert 40 0 0 0 0 0
+print
+insert 11 0 0 0 0 0
+print
+insert 12 0 0 0 0 0
+print
+insert 13 0 0 0 0 0
+print
+insert 14 0 0 0 0 0
+print
+insert 21 0 0 0 0 0
+print
+insert 22 0 0 0 0 0
+insert 23 0 0 0 0 0
+insert 24 0 0 0 0 0
+insert 31 0 0 0 0 0
+insert 32 0 0 0 0 0
+insert 33 0 0 0 0 0
+insert 34 0 0 0 0 0
+insert 25 0 0 0 0 0
+check 17
+    10 0 0 0 0 0
+    11 0 0 0 0 0
+    12 0 0 0 0 0
+    13 0 0 0 0 0
+    14 0 0 0 0 0
+    20 0 0 0 0 0
+    21 0 0 0 0 0
+    22 0 0 0 0 0
+    23 0 0 0 0 0
+    24 0 0 0 0 0
+    25 0 0 0 0 0
+    30 0 0 0 0 0
+    31 0 0 0 0 0
+    32 0 0 0 0 0
+    33 0 0 0 0 0
+    34 0 0 0 0 0
+    40 0 0 0 0 0
+print

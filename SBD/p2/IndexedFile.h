@@ -22,6 +22,8 @@ public:
     void for_each(function<void(Record)> f);
 
     vector<Record> to_vector();
+
+    void dump();
 };
 
 IndexedFile tmp_indexed_file();

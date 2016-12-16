@@ -9,18 +9,20 @@ PagedFile::PagedFile(string path, int pgsz)
     int rv = fseek(_file.get(), 0, SEEK_END);
     assert(rv == 0);
     int fsz = (int) ftell(_file.get());
-    int bpp = sizeof(BPageHeader) + sizeof(BEntry) * pgsz; // bytes per page
+    int bpp = sizeof(BPageHeader) + sizeof(BElement) * pgsz + sizeof(int) * (pgsz + 1); // bytes per page
     assert(fsz % bpp == 0);
     int np = fsz / bpp;
     _next_idx = np;
 }
 
 BPage *PagedFile::_find_page(int idx) {
-    auto it = find_if(_cache.begin(), _cache.end(), [&](const BPage &pg) {
-        return pg.idx() == idx;
+    auto it = find_if(_cache.begin(), _cache.end(), [&](const unique_ptr<BPage> &pg) {
+        return pg.get()->idx() == idx;
     });
     if(it != _cache.end()) {
-        return &*it;
+        BPage *ptr = it->get();
+        assert(ptr);
+        return ptr;
     } else {
         return nullptr;
     }
@@ -34,10 +36,13 @@ BPage PagedFile::_read_page(int idx) {
     int nr = fread(&pgh, sizeof(BPageHeader), 1, _file.get());
     assert(nr == 1);
     assert(pgh.m <= _pgsz);
-    vector<BEntry> v((unsigned long) pgh.m);
-    nr = fread(v.data(), sizeof(BEntry), pgh.m, _file.get());
+    vector<BElement> e((unsigned long) pgh.m);
+    vector<int> p((unsigned long) pgh.m + 1);
+    nr = fread(e.data(), sizeof(BElement), pgh.m, _file.get());
     assert(nr == pgh.m);
-    return move(BPage{idx, pgh.parent, v});
+    nr = fread(p.data(), sizeof(int), pgh.m + 1, _file.get());
+    assert(nr == pgh.m + 1);
+    return move(BPage{idx, pgh.parent, BPageBuf{e, p}});
 }
 
 BPage &PagedFile::read_page(int idx) {
@@ -45,18 +50,18 @@ BPage &PagedFile::read_page(int idx) {
     if(cpg) {
         return *cpg;
     } else {
-        _cache.push_back(_read_page(idx));
-        return _cache.back();
+        _cache.emplace_back(new BPage(_read_page(idx)));
+        BPage *ptr = _cache.back().get();
+        assert(ptr);
+        return *ptr;
     }
 }
 
-BPage &PagedFile::make_page(int parent, vector<BEntry> data) {
-    BPage pg{_next_idx++, parent, move(data)};
+BPage &PagedFile::make_page(int parent, BPageBuf buf) {
+    BPage pg{_next_idx++, parent, move(buf)};
     assert(_find_page(pg.idx()) == nullptr);
-    _cache.push_back(move(pg));
-    return _cache.back();
-}
-
-BPage &PagedFile::make_page(int parent) {
-    return make_page(parent, {BEntry{}});
+    _cache.emplace_back(new BPage(move(pg)));
+    BPage *ptr = _cache.back().get();
+    assert(ptr);
+    return *ptr;
 }

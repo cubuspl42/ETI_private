@@ -12,7 +12,7 @@ using namespace std;
 class PagedFile {
     FilePtr _file;
     int _pgsz;
-    vector<BPage> _cache;
+    vector<unique_ptr<BPage>> _cache;
     int _next_idx = NIL;
 
     BPage *_find_page(int idx);
@@ -20,8 +20,7 @@ class PagedFile {
 public:
     PagedFile(string path, int pgsz);
     BPage &read_page(int idx);
-    BPage &make_page(int parent, vector<BEntry> data);
-    BPage &make_page(int parent);
+    BPage &make_page(int parent, BPageBuf buf);
 };
 
 #endif //P2_FILE_H
