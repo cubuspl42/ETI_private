@@ -214,9 +214,18 @@ void IndexFile::_dump(int p) {
     BPage &pg = pgf.read_page(p);
     BPageBuf &pgb = pg.buf();
     assert(pgb.m() > 0);
-    cout << pg.idx() << ": [" << pgb.p(0);
-    for(int i = 1; i <= pgb.m(); ++i) {
-        cout << " (" << pgb.e(i).x << ") " << pgb.p(i);
+    cout << p << ": [";
+    for(int i = 0; i <= pgb.m(); ++i) {
+        if(i > 0) {
+            int x = pgb.e(i).x;
+            cout << " (" << x << ") ";
+        }
+        int pi = pgb.p(i);
+        if(pi >= 0) {
+            cout << pi;
+        } else {
+            cout << ".";
+        }
     }
     cout << "]" << endl;
 

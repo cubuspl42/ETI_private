@@ -1,0 +1,23 @@
+insert 10 0 0 0 0 0
+insert 123 0 0 0 0 0
+insert 154 0 0 0 0 0
+insert 642 0 0 0 0 0
+insert 912 0 0 0 0 0
+insert 73 0 0 0 0 0
+insert 812 0 0 0 0 0
+insert 34 0 0 0 0 0
+insert 12 0 0 0 0 0
+insert 734 0 0 0 0 0
+insert 194 0 0 0 0 0
+insert 124 0 0 0 0 0
+insert 984 0 0 0 0 0
+insert 10917 0 0 0 0 0
+insert 143 0 0 0 0 0
+insert 8014 0 0 0 0 0
+insert 7163 0 0 0 0 0
+insert 14343 0 0 0 0 0
+insert 1345 0 0 0 0 0
+insert 894 0 0 0 0 0
+insert 1435 0 0 0 0 0
+insert 451 0 0 0 0 0
+print

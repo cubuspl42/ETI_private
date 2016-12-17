@@ -21,7 +21,7 @@ const int D = 2;
  */
 class IndexFile {
     PagedFile pgf;
-    int s = NIL;
+    int s = NIL; // FIXME: Writeback
     int d = D; // FIXME
 
     /**
