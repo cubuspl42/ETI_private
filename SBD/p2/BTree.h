@@ -16,13 +16,19 @@ enum CompensateStatus {
 
 const int D = 2;
 
-/**
- * BIndex ?
- */
-class IndexFile {
+class BMem {
+
+};
+
+class BCache {
+
+};
+
+class BTree {
     PagedFile pgf;
     int s = NIL; // FIXME: Writeback
-    int d = D; // FIXME
+    int d = D; // FIXME: Dynamic
+//    vector<BPage> mem;
 
     /**
      * @param p initial page index
@@ -41,10 +47,14 @@ class IndexFile {
 
     bool page_overflows(BPage &pg);
 
+    bool page_underflows(BPage &pg);
+
     BPage &make_root(BPageBuf buf);
 
+    void _fix_leaf(BPage &pg);
+
 public:
-    IndexFile(string path);
+    BTree(string path);
 
     /**
      * Find element
@@ -71,6 +81,8 @@ public:
     void _dump(int p);
 
     void dump();
+
+    void _merge(BPage &lp, BPage &rp, BPageBuf &ppgb, int i);
 };
 
 #endif //P2_INDEXFILE_H

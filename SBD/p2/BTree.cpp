@@ -2,12 +2,12 @@
 // Created by kuba on 09.12.16.
 //
 
-#include "IndexFile.h"
+#include "BTree.h"
 #include "BPage.h"
 
 #include <iostream>
 
-pair<int, int> IndexFile::_find(int p, int x) {
+pair<int, int> BTree::_find(int p, int x) {
     BPageBuf &pgb = pgf.read_page(p).buf();
     int m = pgb.m();
 
@@ -39,7 +39,7 @@ pair<int, int> IndexFile::_find(int p, int x) {
 }
 
 
-int IndexFile::find(int x) {
+int BTree::find(int x) {
     if (s == NIL) {
         return NOT_FOUND;
     }
@@ -48,7 +48,7 @@ int IndexFile::find(int x) {
     return rv;
 }
 
-void IndexFile::_insert(int p, BElement e) {
+void BTree::_insert(int p, BElement e) {
     assert(p >= 0);
     BPage &pg = pgf.read_page(p);
     pg.buf().insert(e);
@@ -63,7 +63,7 @@ void IndexFile::_insert(int p, BElement e) {
     assert(!page_overflows(pg));
 }
 
-InsertStatus IndexFile::insert(int x, int a) {
+InsertStatus BTree::insert(int x, int a) {
     if (s == NIL) {
         make_root(BPageBuf(BElement(x, a)));
         pgf.write_back();
@@ -84,8 +84,69 @@ InsertStatus IndexFile::insert(int x, int a) {
     return OK;
 }
 
-void IndexFile::remove(int x) {
-    // FIXME
+static BPage &max_leaf(PagedFile &pgf, int p) {
+    BPage &pg = pgf.read_page(p);
+    BPageBuf &pgb = pg.buf();
+    if(pgb.is_leaf()) {
+        return pg;
+    } else {
+        int rp = pgb.p(pgb.m());
+        return max_leaf(pgf, rp);
+    }
+}
+
+void BTree::remove(int x) {
+    int p, ao;
+    tie(p, ao) = _find(s, x);
+    assert(ao != NOT_FOUND);
+    BPage &pg = pgf.read_page(p);
+    BPageBuf &pgb = pg.buf();
+
+    int c = pgb.find_child(p);
+    if(pgb.is_leaf()) {
+        pgb.remove(c);
+        _fix_leaf(pg);
+    } else {
+        int lp = pgb.p(c - 1);
+        BPage &ml = max_leaf(pgf, lp);
+        BPageBuf &mlb = ml.buf();
+        BElement e = mlb.remove_max();
+        pgb.set_e(c, e);
+        _fix_leaf(ml);
+    }
+}
+
+void BTree::_fix_leaf(BPage &pg) {
+    if(page_underflows(pg)) {
+        if(_compensate(pg.idx()) == COMPENSATE_NOT_POSSIBLE) {
+            BPage &ppg = pgf.read_page(pg.parent());
+            BPageBuf &ppgb = ppg.buf();
+            int c = ppgb.find_child(pg.idx());
+            if(c < ppgb.m()) {
+                int rs = ppgb.p(c + 1);
+                BPage &rp = pgf.read_page(rs);
+                _merge(pg, rp, ppgb, c);
+            } else {
+                int ls = ppgb.p(c - 1);
+                BPage &lp = pgf.read_page(ls);
+                _merge(lp, pg, ppgb, c);
+            }
+        }
+    }
+}
+
+void BTree::_merge(BPage &lp, BPage &rp, BPageBuf &ppgb, int i) {
+    BPageBuf &lpb = lp.buf();
+    BPageBuf &rpb = rp.buf();
+    BElement el = ppgb.e(i);
+    vector<BElement> ve = lpb.ve();
+    ve.push_back(el);
+    ve.insert(ve.end(), rpb.ve().begin(), rpb.ve().end());
+    vector<int> vp = lpb.vp();
+    vp.insert(vp.end(), rpb.vp().begin(), rpb.vp().end());
+    BPageBuf buf{ve, vp};
+    ppgb.emerge(i, lp.idx());
+    // FIXME: Garbage collect @rp
 }
 
 static void distribute(BPage &lpg, BPage &rpg, BPage &ppg, int i) {
@@ -116,7 +177,7 @@ static void distribute(BPage &lpg, BPage &rpg, BPage &ppg, int i) {
     rpg.reset(rb);
 }
 
-CompensateStatus IndexFile::_compensate(int p) {
+CompensateStatus BTree::_compensate(int p) {
     assert(p >= 0);
     BPage &pg = pgf.read_page(p);
     int parent = pg.parent();
@@ -150,7 +211,7 @@ CompensateStatus IndexFile::_compensate(int p) {
     }
 }
 
-void IndexFile::_split(int p) {
+void BTree::_split(int p) {
     BPage &pg = pgf.read_page(p);
     BPageBuf &pgb = pg.buf();
     assert(pgb.m() > 2 * d);
@@ -173,7 +234,7 @@ void IndexFile::_split(int p) {
     }
 }
 
-void IndexFile::_for_each(int p, function<void(pair<int, int>)> f) {
+void BTree::_for_each(int p, function<void(pair<int, int>)> f) {
     if (p == NIL) {
         return;
     }
@@ -195,22 +256,22 @@ void IndexFile::_for_each(int p, function<void(pair<int, int>)> f) {
     }
 }
 
-void IndexFile::for_each(function<void(pair<int, int>)> f) {
+void BTree::for_each(function<void(pair<int, int>)> f) {
     _for_each(s, f);
     pgf.write_back();
 }
 
-bool IndexFile::page_overflows(BPage &pg) {
+bool BTree::page_overflows(BPage &pg) {
     return pg.buf().m() > 2 * d;
 }
 
-BPage &IndexFile::make_root(BPageBuf buf) {
+BPage &BTree::make_root(BPageBuf buf) {
     BPage &pg = pgf.make_page(NIL, move(buf));
     s = pg.idx();
     return pg;
 }
 
-void IndexFile::_dump(int p) {
+void BTree::_dump(int p) {
     BPage &pg = pgf.read_page(p);
     BPageBuf &pgb = pg.buf();
     assert(pgb.m() > 0);
@@ -237,12 +298,17 @@ void IndexFile::_dump(int p) {
     }
 }
 
-void IndexFile::dump() {
+void BTree::dump() {
     _dump(s);
 }
 
-IndexFile::IndexFile(string path) : pgf(path, 2*D) {
+BTree::BTree(string path) : pgf(path, 2*D) {
     cerr << "Loaded index file " << path << endl;
 }
+
+bool BTree::page_underflows(BPage &pg) {
+    return pg.buf().m() < d;
+}
+
 
 

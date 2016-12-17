@@ -3,7 +3,7 @@
 
 #include "PagedFile.h"
 #include "Record.h"
-#include "IndexFile.h"
+#include "BTree.h"
 #include "ContentFile.h"
 
 #include <string>
@@ -11,7 +11,7 @@
 using namespace std;
 
 class IndexedFile {
-    IndexFile ixf;
+    BTree ixf;
     ContentFile cf;
 public:
     IndexedFile() = delete;

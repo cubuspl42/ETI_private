@@ -163,6 +163,27 @@ public:
     const vector<int> &vp() const {
         return _p;
     }
+
+    void remove(int i) {
+        assert(is_leaf());
+        _e.erase(_e.begin() + i - 1);
+        _p.pop_back();
+    }
+
+    BElement remove_max() {
+        assert(is_leaf());
+        BElement el = _e.back();
+        _e.pop_back();
+        _p.pop_back();
+        return el;
+    }
+
+    void emerge(int i, int np) {
+        assert(i >= 1 && i <= m());
+        _e.erase(_e.begin() + i - 1);
+        _p.erase(_p.begin() + i);
+        _p[i - 1] = np;
+    }
 };
 
 class BPage {
