@@ -4,10 +4,10 @@
 
 #include "BStorage.h"
 
-void BStorage::read_page(BPage &pg, int i) {
+void BStorage::read_page(BNode &pg, int i) {
 
 }
 
-void BStorage::write_page(const BPage &pg) {
+void BStorage::write_page(const BNode &pg) {
 
 }

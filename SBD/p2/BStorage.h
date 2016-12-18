@@ -5,11 +5,15 @@
 #ifndef P2_BSTORAGE_H
 #define P2_BSTORAGE_H
 
-#include "BPage.h"
+#include "BNode.h"
+#include "BTreeHeader.h"
 
 class BStorage {
-    void read_page(BPage &pg, int i);
-    void write_page(const BPage &pg);
+public:
+    virtual BTreeHeader read_header() = 0;
+    virtual void write_header(BTreeHeader header) = 0;
+    virtual void read_page(BNode &pg, int i) = 0;
+    virtual void write_page(const BNode &pg) = 0;
 };
 
 #include "PagedFile.h"

@@ -6,8 +6,8 @@ set(SOURCES
         main.cpp
         PagedFile.h
         PagedFile.cpp
-        BPage.h
-        BPage.cpp
+        BNode.h
+        BNode.cpp
         IndexedFile.h
         IndexedFile.cpp
         Record.cpp
@@ -19,7 +19,8 @@ set(SOURCES
         ContentFile.h
         BStorage.h
         BStorage.cpp
-        )
+        BTreeHeader.h
+        MemStorage.cpp MemStorage.h)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -pedantic -Werror")
 

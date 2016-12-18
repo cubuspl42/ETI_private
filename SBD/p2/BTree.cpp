@@ -3,89 +3,131 @@
 //
 
 #include "BTree.h"
-#include "BPage.h"
+#include "BNode.h"
 
 #include <iostream>
+#include <stack>
 
-pair<int, int> BTree::_find(int p, int x) {
-    BPageBuf &pgb = pgf.read_page(p).buf();
-    int m = pgb.m();
+pair<int, int> BTree::_find(BStorage &stg, vector<BNode> &mem, int lv, int p, int x) {
+    BNode &nd = mem[lv];
+    stg.read_page(nd, p);
+    int m = nd.m;
 
-    int a = pgb.find(x);
+    int a = nd.find(x);
     if (a != NOT_FOUND) {
         return make_pair(p, a);
     }
 
     for (int i = 1; i <= m; ++i) {
-        int xi = pgb.e(i).x;
+        int xi = nd.e(i).x;
         if (x < xi) {
-            int pi1 = pgb.p(i - 1);
+            int pi1 = nd.p(i - 1);
             if (pi1 == NIL) {
                 return make_pair(p, NOT_FOUND);
             } else {
-                return _find(pi1, x);
+                return _find(stg, mem, lv + 1, pi1, x);
             }
         }
     }
 
-    int xm = pgb.e(m).x;
+    int xm = nd.e(m).x;
     assert(x > xm);
-    int pm = pgb.p(m);
+    int pm = nd.p(m);
     if (pm == NIL) {
         return make_pair(p, NOT_FOUND);
     } else {
-        return _find(pm, x);
+        return _find(stg, mem, lv + 1, pm, x);
     }
 }
 
 
 int BTree::find(int x) {
-    if (s == NIL) {
+    if (hdr.s == NIL) {
         return NOT_FOUND;
     }
-    int rv = _find(s, x).second;
-    pgf.write_back();
+    int rv = _find(_stg, _mem, 0, hdr.s, x).second;
     return rv;
 }
 
-void BTree::_insert(int p, BElement e) {
-    assert(p >= 0);
-    BPage &pg = pgf.read_page(p);
-    pg.buf().insert(e);
+void BTree::_fix_overflow(BStorage &stg, vector<BNode> &mem, int lv) {
+    BNode &nd = mem[lv];
 
-    if (page_overflows(pg)) {
-        assert(pg.buf().m() == 2 * d + 1);
-        if (_compensate(p) != COMPENSATE_OK) {
-            _split(p);
+    if (nd.overflows()) {
+        assert(nd.m == 2 * D + 1);
+        BNode &exnd = mem.back(); // extra node
+
+        if (lv > 0) {
+            BNode &pnd = mem[lv - 1];
+            if(_compensate(stg, nd, pnd, exnd) == COMPENSATE_OK) {
+                stg.write_page(nd);
+                stg.write_page(pnd);
+                stg.write_page(exnd);
+                return;
+            }
+        }
+
+        int nnd_idx = hdr.n++;
+        exnd.idx = nnd_idx;
+
+        BElement me = _split(nd, exnd);
+
+        _stg.write_page(nd);
+        _stg.write_page(exnd);
+
+        if(lv == 0) {
+            exnd.idx = hdr.n++;
+            exnd.m = 1;
+            exnd.data[0] = Ep{BElement{-1, -1}, nd.idx};
+            exnd.data[1] = Ep{me, nnd_idx};
+            hdr.s = exnd.idx;
+            _stg.write_header(hdr);
+            _stg.write_page(exnd);
+        } else {
+            BNode &pnd = mem[lv - 1];
+            int c = pnd.find_child(nd.idx);
+            pnd.psplit(c, nd.idx, me, nnd_idx);
+
+            if(pnd.overflows()) {
+                _fix_overflow(stg, mem, lv - 1);
+            }
         }
     }
 
-    assert(!page_overflows(pg));
+    assert(!nd.overflows());
+    _stg.write_page(nd);
 }
 
 InsertStatus BTree::insert(int x, int a) {
-    if (s == NIL) {
-        make_root(BPageBuf(BElement(x, a)));
-        pgf.write_back();
+    if (hdr.s == NIL) {
+        BNode &root = _mem[0];
+        root.idx = hdr.n++;
+        root.m = 1;
+        root.data[0] = Ep{BElement{-1, -1}, NIL};
+        root.data[1] = Ep{BElement{x, a}, NIL};
+        hdr.s = root.idx;
+        _stg.write_header(hdr);
+        _stg.write_page(root);
+        return OK;
+    } else {
+        int p, ao;
+        tie(p, ao) = _find(_stg, _mem, 0, hdr.s, x);
+
+        if (ao != NOT_FOUND) {
+            assert(ao == a);
+            return ALREADY_EXISTS;
+        }
+
+        BNode &nd = _mem[hdr.h - 1];
+        nd.insert(BElement{x, a});
+
+        _fix_overflow(_stg, _mem, hdr.h - 1);
         return OK;
     }
-
-    int p, ao;
-    std::tie(p, ao) = _find(s, x);
-
-    if (ao != NOT_FOUND) {
-        assert(ao == a);
-        pgf.write_back();
-        return ALREADY_EXISTS;
-    }
-
-    _insert(p, BElement{x, a});
-    pgf.write_back();
-    return OK;
 }
 
-static BPage &max_leaf(PagedFile &pgf, int p) {
-    BPage &pg = pgf.read_page(p);
+#if 0
+static BNode &max_leaf(PagedFile &pgf, int p) {
+    BNode &pg = pgf.read_page(p);
     BPageBuf &pgb = pg.buf();
     if(pgb.is_leaf()) {
         return pg;
@@ -95,11 +137,12 @@ static BPage &max_leaf(PagedFile &pgf, int p) {
     }
 }
 
+
 void BTree::remove(int x) {
     int p, ao;
-    tie(p, ao) = _find(s, x);
+    tie(p, ao) = _find(_stg, _mem, 0, s, x);
     assert(ao != NOT_FOUND);
-    BPage &pg = pgf.read_page(p);
+    BNode &pg = pgf.read_page(p);
     BPageBuf &pgb = pg.buf();
 
     int c = pgb.find_child(p);
@@ -108,7 +151,7 @@ void BTree::remove(int x) {
         _fix_leaf(pg);
     } else {
         int lp = pgb.p(c - 1);
-        BPage &ml = max_leaf(pgf, lp);
+        BNode &ml = max_leaf(pgf, lp);
         BPageBuf &mlb = ml.buf();
         BElement e = mlb.remove_max();
         pgb.set_e(c, e);
@@ -116,26 +159,28 @@ void BTree::remove(int x) {
     }
 }
 
-void BTree::_fix_leaf(BPage &pg) {
+#endif
+#if 0
+void BTree::_fix_leaf(BNode &pg) {
     if(page_underflows(pg)) {
-        if(_compensate(pg.idx()) == COMPENSATE_NOT_POSSIBLE) {
-            BPage &ppg = pgf.read_page(pg.parent());
+        if(_compensate(<#initializer#>, <#initializer#>, <#initializer#>, <#initializer#>) == COMPENSATE_NOT_POSSIBLE) {
+            BNode &ppg = pgf.read_page(pg.parent());
             BPageBuf &ppgb = ppg.buf();
             int c = ppgb.find_child(pg.idx());
             if(c < ppgb.m()) {
                 int rs = ppgb.p(c + 1);
-                BPage &rp = pgf.read_page(rs);
+                BNode &rp = pgf.read_page(rs);
                 _merge(pg, rp, ppgb, c);
             } else {
                 int ls = ppgb.p(c - 1);
-                BPage &lp = pgf.read_page(ls);
+                BNode &lp = pgf.read_page(ls);
                 _merge(lp, pg, ppgb, c);
             }
         }
     }
 }
 
-void BTree::_merge(BPage &lp, BPage &rp, BPageBuf &ppgb, int i) {
+void BTree::_merge(BNode &lp, BNode &rp, BPageBuf &ppgb, int i) {
     BPageBuf &lpb = lp.buf();
     BPageBuf &rpb = rp.buf();
     BElement el = ppgb.e(i);
@@ -148,140 +193,120 @@ void BTree::_merge(BPage &lp, BPage &rp, BPageBuf &ppgb, int i) {
     ppgb.emerge(i, lp.idx());
     // FIXME: Garbage collect @rp
 }
+#endif
 
-static void distribute(BPage &lpg, BPage &rpg, BPage &ppg, int i) {
-    vector<BElement> e;
-    BPageBuf &lpgb = lpg.buf();
-    BPageBuf &ppgb = ppg.buf();
-    BPageBuf &rpgb = rpg.buf();
-    for(int j = 1; j <= lpgb.m(); ++j) {
-        e.push_back(lpgb.e(j));
-    }
-    e.push_back(ppgb.e(i));
-    for(int j = 1; j <= rpgb.m(); ++j) {
-        e.push_back(rpgb.e(j));
-    }
-    assert(e.size() >= 3);
+static void distribute_l(BNode &lnd, BNode &rnd, BNode &pnd, int i) {
+    assert(false);
 
-    int m = (int) e.size() / 2;
-    BElement me = e[m];
+    assert(lnd.overflows());
+    assert(!rnd.full());
 
-    vector<BElement> le{e.begin(), e.begin() + m};
-    vector<BElement> re{e.begin() + m + 1, e.end()};
+    int sm = lnd.m + 1 + rnd.m;
+    int lm = sm / 2;
+    int rm = sm - lm - 1;
 
-    BPageBuf lb{le};
-    BPageBuf rb{re};
+    BElement me = pnd.e(i);
+    rnd.data.front().e = me;
 
-    lpg.reset(lb);
-    ppgb.set_e(i, me);
-    rpg.reset(rb);
+    rnd.data.insert(rnd.data.begin(), lnd.data.begin() + lm + 1, lnd.data.end());
+    BElement nme = rnd.data.front().e;
+    pnd.set_e(i, nme);
+
+    lnd.m = lm;
+    rnd.m = rm;
 }
 
-CompensateStatus BTree::_compensate(int p) {
-    assert(p >= 0);
-    BPage &pg = pgf.read_page(p);
-    int parent = pg.parent();
-    if (parent == NIL) {
-        return COMPENSATE_NOT_POSSIBLE;
-    }
+static void distribute_r(BNode &lnd, BNode &rnd, BNode &pnd, int i) {
+    assert(lnd.overflows());
+    assert(!rnd.full());
 
-    BPage &ppg = pgf.read_page(parent);
-    BPageBuf &ppgb = ppg.buf();
-    int pm = ppgb.m();
-    int c = ppgb.find_child(p); // C-index of @p in its parent
+    int sm = lnd.m + 1 + rnd.m;
+    int lm = sm / 2;
+    int rm = sm - lm - 1;
 
-    BPage *lpg = nullptr, *rpg = nullptr;
-    if (c - 1 >= 0) {
-        int lp = ppgb.p(c - 1); // P-index of left sibling
-        lpg = &pgf.read_page(lp);
-    }
-    if (c + 1 <= pm) {
-        int rp = ppgb.p(c + 1); // P-index of right sibling
-        rpg = &pgf.read_page(rp);
-    }
+    BElement me = pnd.e(i);
+    rnd.data.front().e = me;
 
-    if (lpg && lpg->buf().m() < d * 2) {
-        distribute(*lpg, pg, ppg, c);
-        return COMPENSATE_OK;
-    } else if (rpg && rpg->buf().m() < d * 2) {
-        distribute(pg, *rpg, ppg, c + 1);
-        return COMPENSATE_OK;
-    } else {
-        return COMPENSATE_NOT_POSSIBLE;
-    }
+    rnd.data.insert(rnd.data.begin(), lnd.e_begin() + lm, lnd.e_end());
+    BElement nme = rnd.data.front().e;
+    pnd.set_e(i, nme);
+
+    lnd.m = lm;
+    rnd.m = rm;
 }
 
-void BTree::_split(int p) {
-    BPage &pg = pgf.read_page(p);
-    BPageBuf &pgb = pg.buf();
-    assert(pgb.m() > 2 * d);
-    int parent = pg.parent();
-    BPage &ppg = parent == NIL ?
-                 make_root(BPageBuf{NIL}) :
-                 pgf.read_page(parent);
-    BPageBuf &ppgb = ppg.buf();
-    int c = (parent == NIL) ? 0 : ppgb.find_child(pg.idx());
+CompensateStatus BTree::_compensate(BStorage &stg, BNode &nd, BNode &pnd, BNode &snd) {
+    int c = pnd.find_child(nd.idx); // C-index of @p in its parent
 
-    BPageBuf lb, rb;
-    BElement med;
-    tie(lb, med, rb) = pgb.split();
-    pg.reset(ppg.idx(), lb);
-    BPage &rpg = pgf.make_page(ppg.idx(), rb);
-    ppgb.preplace(c, med, pg.idx(), rpg.idx());
-
-    if(page_overflows(ppg)) {
-        _split(ppg.idx());
+    if(c > 0) {
+        /* Try left sibling */
+        int ls = pnd.p(c - 1);
+        stg.read_page(snd, ls);
+        if(!snd.full()) {
+            distribute_l(snd, nd, pnd, c);
+            return COMPENSATE_OK;
+        }
     }
+
+    if(c < pnd.m) {
+        /* Try right sibling */
+        int rs = pnd.p(c + 1);
+        stg.read_page(snd, rs);
+        if(!snd.full()) {
+            distribute_r(nd, snd, pnd, c + 1);
+            return COMPENSATE_OK;
+        }
+    }
+
+    /* Give up */
+    return COMPENSATE_NOT_POSSIBLE;
 }
 
-void BTree::_for_each(int p, function<void(pair<int, int>)> f) {
+BElement BTree::_split(BNode &nd, BNode &nnd) {
+    assert(nd.m == 2 * D + 1);
+    copy(nd.data.begin() + D + 1, nd.data.end(), nnd.data.begin());
+    nd.m = nnd.m = D;
+    BElement me = nd.data[D + 1].e;
+    return me;
+}
+
+void BTree::_for_each(int p, vector<BNode> &mem, int lv, function<void(BElement)> f) {
     if (p == NIL) {
         return;
     }
 
-    BPage &pg = pgf.read_page(p);
-    BPageBuf &pgb = pg.buf();
-    assert(pgb.m() > 0);
+    BNode &nd = mem[lv];
+    _stg.read_page(nd, p);
+    assert(nd.m > 0);
 
-    int p0 = pgb.p(0);
-    _for_each(p0, f);
+    int p0 = nd.p(0);
+    _for_each(p0, mem, lv + 1, f);
 
-    for (int i = 1; i <= pgb.m(); ++i) {
-        int x = pgb.e(i).x;
-        int a = pgb.e(i).a;
-        pair<int, int> xa = make_pair(x, a);
-        f(xa);
-        int pi = pgb.p(i);
-        _for_each(pi, f);
+    for (int i = 1; i <= nd.m; ++i) {
+        BElement e = nd.e(i);
+        f(e);
+        int pi = nd.p(i);
+        _for_each(pi, mem, lv + 1, f);
     }
 }
 
-void BTree::for_each(function<void(pair<int, int>)> f) {
-    _for_each(s, f);
-    pgf.write_back();
+void BTree::for_each(function<void(BElement)> f) {
+    _for_each(hdr.s, _mem, 0, f);
 }
 
-bool BTree::page_overflows(BPage &pg) {
-    return pg.buf().m() > 2 * d;
-}
 
-BPage &BTree::make_root(BPageBuf buf) {
-    BPage &pg = pgf.make_page(NIL, move(buf));
-    s = pg.idx();
-    return pg;
-}
-
-void BTree::_dump(int p) {
-    BPage &pg = pgf.read_page(p);
-    BPageBuf &pgb = pg.buf();
-    assert(pgb.m() > 0);
-    cout << p << ": [";
-    for(int i = 0; i <= pgb.m(); ++i) {
+void BTree::_dump(int p, int lv) {
+    BNode &nd = _mem[lv];
+    _stg.read_page(nd, p);
+    assert(nd.m > 0);
+    assert(nd.idx == p);
+    cout << "{" << lv << "} " << p << ": [";
+    for(int i = 0; i <= nd.m; ++i) {
         if(i > 0) {
-            int x = pgb.e(i).x;
+            int x = nd.e(i).x;
             cout << " (" << x << ") ";
         }
-        int pi = pgb.p(i);
+        int pi = nd.p(i);
         if(pi >= 0) {
             cout << pi;
         } else {
@@ -290,25 +315,19 @@ void BTree::_dump(int p) {
     }
     cout << "]" << endl;
 
-    for(int i = 0; i <= pgb.m(); ++i) {
-        int pi = pgb.p(i);
+    for(int i = 0; i <= nd.m; ++i) {
+        int pi = nd.p(i);
         if(pi > -1) {
-            _dump(pi);
+            _dump(pi, lv + 1);
         }
     }
 }
 
 void BTree::dump() {
-    _dump(s);
+    _dump(hdr.s, 0);
 }
 
-BTree::BTree(string path) : pgf(path, 2*D) {
-    cerr << "Loaded index file " << path << endl;
+BTree::BTree(BStorage &stg) : _stg{stg} {
+    hdr = stg.read_header();
+    _mem.resize(hdr.h + 1);
 }
-
-bool BTree::page_underflows(BPage &pg) {
-    return pg.buf().m() < d;
-}
-
-
-

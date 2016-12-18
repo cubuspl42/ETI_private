@@ -6,15 +6,18 @@
 #define P2_INDEXFILE_H
 
 #include <iostream>
+#include <stack>
+#include <vector>
 #include "common.h"
 #include "PagedFile.h"
+#include "BStorage.h"
+#include "BNode.h"
 
 enum CompensateStatus {
     COMPENSATE_OK,
     COMPENSATE_NOT_POSSIBLE
 };
 
-const int D = 2;
 
 class BMem {
 
@@ -25,36 +28,37 @@ class BCache {
 };
 
 class BTree {
-    PagedFile pgf;
-    int s = NIL; // FIXME: Writeback
+    BStorage &_stg;
+    vector<BNode> _mem;
+    BTreeHeader hdr;
+//    int s = NIL; // FIXME: Writeback
     int d = D; // FIXME: Dynamic
-//    vector<BPage> mem;
 
     /**
      * @param p initial page index
      * @param x key
      * @return (page, value) or (page, NOT_FOUND)
      */
-    pair<int, int> _find(int p, int x);
+    pair<int, int> _find(BStorage &stg, vector<BNode> &mem, int lv, int p, int x);
 
-    void _insert(int p, BElement e);
+    void _insert(BStorage &stg, vector<BNode> &mem, int lv, int p, BElement e);
 
-    CompensateStatus _compensate(int p);
+    CompensateStatus _compensate(BStorage &stg, BNode &lnd, BNode &pnd, BNode &rnd);
 
-    void _split(int p);
+    BElement _split(BNode &nd, BNode &nnd);
 
-    void _for_each(int p, function<void(pair<int, int>)> f);
+    void _for_each(int p, vector<BNode> &mem, int lv, function<void(BElement)> f);
 
-    bool page_overflows(BPage &pg);
+    bool page_overflows(BNode &pg);
 
-    bool page_underflows(BPage &pg);
+    bool page_underflows(BNode &pg);
 
-    BPage &make_root(BPageBuf buf);
+    void _fix_leaf(BNode &pg);
 
-    void _fix_leaf(BPage &pg);
+    void _fix_overflow(BStorage &stg, std::vector<BNode> &mem, int lv);
 
 public:
-    BTree(string path);
+    BTree(BStorage &stg);
 
     /**
      * Find element
@@ -76,13 +80,13 @@ public:
      */
     void remove(int x);
 
-    void for_each(function<void(pair<int, int>)> f);
+    void for_each(function<void(BElement)> f);
 
-    void _dump(int p);
+    void _dump(int p, int i);
 
     void dump();
 
-    void _merge(BPage &lp, BPage &rp, BPageBuf &ppgb, int i);
+//    void _merge(BNode &lp, BNode &rp, BPageBuf &ppgb, int i);
 };
 
 #endif //P2_INDEXFILE_H

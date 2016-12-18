@@ -1,7 +1,7 @@
 #ifndef P2_FILE_H
 #define P2_FILE_H
 
-#include "BPage.h"
+#include "BNode.h"
 
 #include <algorithm>
 #include <memory>
@@ -12,17 +12,16 @@ using namespace std;
 class PagedFile {
     FilePtr _file;
     int _pgsz;
-    vector<unique_ptr<BPage>> _cache;
+    vector<unique_ptr<BNode>> _cache;
     int _next_idx = NIL;
     int bpp;
 
-    BPage *_find_page(int idx);
-    BPage _read_page(int idx);
-    void _write_page(const BPage &pg);
+    BNode *_find_page(int idx);
+    BNode _read_page(int idx);
+    void _write_page(const BNode &pg);
 public:
     PagedFile(string path, int pgsz);
-    BPage &read_page(int idx);
-    BPage &make_page(int parent, BPageBuf buf);
+    BNode &read_page(int idx);
     void write_back();
 
 };

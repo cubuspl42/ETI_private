@@ -11,7 +11,7 @@
 using namespace std;
 
 class IndexedFile {
-    BTree ixf;
+    BTree bt;
     ContentFile cf;
 public:
     IndexedFile() = delete;

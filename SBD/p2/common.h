@@ -6,6 +6,7 @@
 
 constexpr int NIL = -1;
 constexpr int NOT_FOUND = -1;
+const int D = 2;
 
 using namespace std;
 

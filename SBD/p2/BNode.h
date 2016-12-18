@@ -1,7 +1,8 @@
-#ifndef P2_BPAGE_H
-#define P2_BPAGE_H
+#ifndef P2_BNODE_H
+#define P2_BNODE_H
 
 #include "common.h"
+//#include "BTree.h"
 
 #include <algorithm>
 #include <cassert>
@@ -46,7 +47,12 @@ inline bool operator<(BElement e1, BElement e2) {
     return make_pair(e1.x, e1.a) < make_pair(e2.x, e2.a);
 }
 
-class BPageBuf {
+inline bool operator==(BElement e1, BElement e2) {
+    return make_pair(e1.x, e1.a) == make_pair(e2.x, e2.a);
+}
+
+#if 0
+class __BPageBuf {
     vector<BElement> _e;
     vector<int> _p;
 public:
@@ -185,40 +191,106 @@ public:
         _p[i - 1] = np;
     }
 };
+#endif
 
-class BPage {
-    int _idx = NIL;
-    int _parent = NIL;
-    BPageBuf _buf;
-public:
-    BPage(BPage &&) = default;
+struct Ep {
+    BElement e;
+    int p;
+};
 
-    BPage(const BPage &) = delete;
+inline bool operator<(Ep e1, Ep e2) {
+    return e1.e < e2.e;
+}
 
-    BPage(int idx, int parent, BPageBuf buf);
+struct BNode {
+    int idx = NIL;
+    int m = 0;
+    vector<Ep> data;
 
-    void reset(int parent, BPageBuf buf);
+    BNode() : data(D * 2 + 2) {}
 
-    void reset(BPageBuf buf);
-
-    /**
-     * P-index of this page
-     */
-    int idx() const {
-        return _idx;
+    BElement e(int i) const {
+        assert(i > 0 && i <= m);
+        return data[i].e;
     }
 
-    int parent() const {
-        return _parent;
+    void set_e(int i, BElement e) {
+        assert(i > 0 && i <= m);
+        data[i].e = e;
     }
 
-    BPageBuf &buf() {
-        return _buf;
+    int p(int i) const {
+        assert(i >= 0 && i <= m);
+        return data[i].p;
     }
 
-    const BPageBuf &buf() const {
-        return _buf;
+    auto e_begin() -> decltype(data.begin()) {
+        return data.begin() + 1;
+    }
+
+    auto e_end() -> decltype(data.begin()) {
+        return data.begin() + m + 1;
+    }
+
+    auto p_begin() const -> decltype(data.begin()) {
+        return data.begin();
+    }
+
+    auto p_end() const -> decltype(data.begin()) {
+        return data.begin() + m + 1;
+    }
+
+    int find_child(int p) {
+        auto it = find_if(p_begin(), p_end(), [&](Ep ep) {
+            return ep.p == p;
+        });
+        assert(it != p_end());
+        return (int) distance(p_begin(), it);
+    }
+
+    bool is_leaf() const {
+        return all_of(p_begin(), p_end(), [&](Ep ep) {
+            return ep.p == NIL;
+        });
+    }
+
+    bool full() {
+        return m >= 2 * D;
+    }
+
+    bool overflows() const {
+        return m > 2 * D;
+    }
+
+    bool underflows() const {
+        return m < D;
+    }
+
+    int find(int x) {
+        auto it = find_if(data.begin() + 1, data.end(), [&](Ep ep) {
+            return ep.e.x == x;
+        });
+        if (it != data.end()) {
+            return it->e.a;
+        } else {
+            return NOT_FOUND;
+        }
+    }
+
+    void insert(BElement e) {
+        assert(is_leaf());
+        assert(m < (int) data.size());
+        data[++m] = Ep{e, NIL};
+        sort(e_begin(), e_end()); // FIXME: last element? m?
+    }
+
+    void psplit(int i, int lp, BElement e, int rp) {
+        assert(i > 0 && i <= m);
+        Ep ep{e, rp};
+        data.insert(data.begin() + i + 1, ep);
+        data[i].p = lp;
+        ++m;
     }
 };
 
-#endif //P2_BPAGE_H
+#endif //P2_BNODE_H

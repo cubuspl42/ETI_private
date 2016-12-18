@@ -4,6 +4,7 @@
 
 #include <cassert>
 
+#if 0
 PagedFile::PagedFile(string path, int pgsz)
         : _file{fopen(path.c_str(), "wb+"), file_close}, _pgsz(pgsz) {
     bpp = sizeof(BPageHeader) + sizeof(BElement) * pgsz + sizeof(int) * (pgsz + 1); // bytes per page
@@ -15,12 +16,12 @@ PagedFile::PagedFile(string path, int pgsz)
     _next_idx = np;
 }
 
-BPage *PagedFile::_find_page(int idx) {
-    auto it = find_if(_cache.begin(), _cache.end(), [&](const unique_ptr<BPage> &pg) {
+BNode *PagedFile::_find_page(int idx) {
+    auto it = find_if(_cache.begin(), _cache.end(), [&](const unique_ptr<BNode> &pg) {
         return pg.get()->idx() == idx;
     });
     if(it != _cache.end()) {
-        BPage *ptr = it->get();
+        BNode *ptr = it->get();
         assert(ptr);
         return ptr;
     } else {
@@ -28,7 +29,7 @@ BPage *PagedFile::_find_page(int idx) {
     }
 }
 
-BPage PagedFile::_read_page(int idx) {
+BNode PagedFile::_read_page(int idx) {
     assert(idx >= 0);
     int rv = fseek(_file.get(), bpp * idx, SEEK_SET);
     assert(rv == 0);
@@ -46,10 +47,10 @@ BPage PagedFile::_read_page(int idx) {
     p.resize((unsigned long) (pgh.m + 1));
     int fp = (int) ftell(_file.get());
     assert(fp % bpp == 0);
-    return move(BPage{idx, pgh.parent, BPageBuf{e, p}});
+    return move(BNode{idx, pgh.parent, BPageBuf{e, p}});
 }
 
-void PagedFile::_write_page(const BPage &pg) {
+void PagedFile::_write_page(const BNode &pg) {
     const BPageBuf &pgb = pg.buf();
     int idx = pg.idx();
     assert(idx >= 0);
@@ -73,31 +74,23 @@ void PagedFile::_write_page(const BPage &pg) {
     assert(fp % bpp == 0);
 }
 
-BPage &PagedFile::read_page(int idx) {
-    BPage *cpg = _find_page(idx);
+BNode &PagedFile::read_page(int idx) {
+    BNode *cpg = _find_page(idx);
     if(cpg) {
         return *cpg;
     } else {
-        _cache.emplace_back(new BPage(_read_page(idx)));
-        BPage *ptr = _cache.back().get();
+        _cache.emplace_back(new BNode(_read_page(idx)));
+        BNode *ptr = _cache.back().get();
         assert(ptr);
         return *ptr;
     }
 }
 
-BPage &PagedFile::make_page(int parent, BPageBuf buf) {
-    BPage pg{_next_idx++, parent, move(buf)};
-    assert(_find_page(pg.idx()) == nullptr);
-    _cache.emplace_back(new BPage(move(pg)));
-    BPage *ptr = _cache.back().get();
-    assert(ptr);
-    return *ptr;
-}
-
 void PagedFile::write_back() {
     for(auto &pgp : _cache) {
-        const BPage &pg = *pgp.get();
+        const BNode &pg = *pgp.get();
         _write_page(pg);
     }
     _cache.clear();
 }
+#endif
