@@ -4,18 +4,17 @@
 
 #include "BTree.h"
 #include "BNode.h"
+#include "BFindResult.h"
+#include "BElement.h"
 
-#include <iostream>
-#include <stack>
-
-pair<int, int> BTree::_find(BStorage &stg, vector<BNode> &mem, int lv, int p, int x) {
+BFindResult BTree::_find(BStorage &stg, vector<BNode> &mem, int lv, int p, int x) {
     BNode &nd = mem[lv];
     stg.read_page(nd, p);
     int m = nd.m;
 
-    int a = nd.find(x);
-    if (a != NOT_FOUND) {
-        return make_pair(p, a);
+    auto nfr = nd.find(x);
+    if (nfr.e.a != NOT_FOUND) {
+        return BFindResult{p, nfr.e, lv, nfr.c};
     }
 
     for (int i = 1; i <= m; ++i) {
@@ -23,7 +22,7 @@ pair<int, int> BTree::_find(BStorage &stg, vector<BNode> &mem, int lv, int p, in
         if (x < xi) {
             int pi1 = nd.p(i - 1);
             if (pi1 == NIL) {
-                return make_pair(p, NOT_FOUND);
+                return BFindResult{p, {x, NOT_FOUND}, lv, NIL};
             } else {
                 return _find(stg, mem, lv + 1, pi1, x);
             }
@@ -34,19 +33,23 @@ pair<int, int> BTree::_find(BStorage &stg, vector<BNode> &mem, int lv, int p, in
     assert(x > xm);
     int pm = nd.p(m);
     if (pm == NIL) {
-        return make_pair(p, NOT_FOUND);
+        return BFindResult{p, {x, NOT_FOUND}, lv, NIL};
     } else {
         return _find(stg, mem, lv + 1, pm, x);
     }
 }
 
+BFindResult BTree::_find_max(BStorage &stg, vector<BNode> &mem, int lv, int p) {
+    assert(false); // TODO: implement
+    return BFindResult{0, {}, 0, 0};
+}
 
 int BTree::find(int x) {
     if (hdr.s == NIL) {
         return NOT_FOUND;
     }
-    int rv = _find(_stg, _mem, 0, hdr.s, x).second;
-    return rv;
+    auto rv = _find(_stg, _mem, 0, hdr.s, x);
+    return rv.e.a;
 }
 
 void BTree::_fix_overflow(BStorage &stg, vector<BNode> &mem, int lv) {
@@ -58,7 +61,7 @@ void BTree::_fix_overflow(BStorage &stg, vector<BNode> &mem, int lv) {
 
         if (lv > 0) {
             BNode &pnd = mem[lv - 1];
-            if(_compensate(stg, nd, pnd, exnd) == COMPENSATE_OK) {
+            if (_compensate(stg, nd, pnd, exnd) == COMPENSATE_OK) {
                 stg.write_page(nd);
                 stg.write_page(pnd);
                 stg.write_page(exnd);
@@ -74,7 +77,7 @@ void BTree::_fix_overflow(BStorage &stg, vector<BNode> &mem, int lv) {
         _stg.write_page(nd);
         _stg.write_page(exnd);
 
-        if(lv == 0) {
+        if (lv == 0) {
             exnd.idx = hdr.n++;
             exnd.m = 1;
             exnd.data[0] = Ep{BElement{-1, -1}, nd.idx};
@@ -87,13 +90,57 @@ void BTree::_fix_overflow(BStorage &stg, vector<BNode> &mem, int lv) {
             int c = pnd.find_child(nd.idx);
             pnd.psplit(c, nd.idx, me, nnd_idx);
 
-            if(pnd.overflows()) {
+            if (pnd.overflows()) {
                 _fix_overflow(stg, mem, lv - 1);
             }
         }
     }
 
     assert(!nd.overflows());
+    _stg.write_page(nd);
+}
+
+void BTree::_fix_underflow(BStorage &stg, std::vector<BNode> &mem, int lv) {
+    BNode &nd = mem[lv];
+
+    if(lv > 0) {
+        if(nd.underflows()) {
+            assert(nd.m == D - 1);
+
+            BNode &exnd = mem.back(); // extra node
+
+            BNode &pnd = mem[lv - 1];
+            if (_compensate(stg, nd, pnd, exnd) == COMPENSATE_OK) {
+                stg.write_page(nd);
+                stg.write_page(pnd);
+                stg.write_page(exnd);
+                return;
+            }
+
+            int c = pnd.find_child(nd.idx);
+            if (c < pnd.m) {
+                int pr = pnd.p(c + 1);
+//                BElement e = pnd.e(c + 1);
+                stg.read_page(exnd, pr);
+                _merge(nd, exnd, c + 1);
+            } else {
+                assert(c > 0);
+                int pl = pnd.p(c - 1);
+//                BElement e = pnd.e(c);
+                stg.read_page(exnd, pl);
+                _merge(exnd, nd, c);
+            }
+
+            _fix_underflow(stg, mem, lv - 1);
+        }
+
+    } else {
+        assert(lv == 0);
+        if(nd.m == 0) {
+            // FIXME: reroot
+        }
+    }
+
     _stg.write_page(nd);
 }
 
@@ -109,11 +156,10 @@ InsertStatus BTree::insert(int x, int a) {
         _stg.write_page(root);
         return OK;
     } else {
-        int p, ao;
-        tie(p, ao) = _find(_stg, _mem, 0, hdr.s, x);
+        auto fr = _find(_stg, _mem, 0, hdr.s, x);
 
-        if (ao != NOT_FOUND) {
-            assert(ao == a);
+        if (fr.e.a != NOT_FOUND) {
+            assert(fr.e.a == a);
             return ALREADY_EXISTS;
         }
 
@@ -138,28 +184,30 @@ static BNode &max_leaf(PagedFile &pgf, int p) {
 }
 
 
-void BTree::remove(int x) {
-    int p, ao;
-    tie(p, ao) = _find(_stg, _mem, 0, s, x);
-    assert(ao != NOT_FOUND);
-    BNode &pg = pgf.read_page(p);
-    BPageBuf &pgb = pg.buf();
+#endif
 
-    int c = pgb.find_child(p);
-    if(pgb.is_leaf()) {
-        pgb.remove(c);
-        _fix_leaf(pg);
+void BTree::remove(int x) {
+    auto fr = _find(_stg, _mem, 0, hdr.s, x);
+    assert(fr.e.a != NOT_FOUND);
+
+    BNode &nd = _mem[fr.lv];
+
+    if (fr.lv != hdr.h - 1) {
+        int lp = nd.p(fr.c - 1);
+        auto frm = _find_max(_stg, _mem, fr.lv + 1, lp);
+        assert(frm.lv == hdr.h - 1);
+
+        nd.set_e(fr.c, frm.e);
+
+        BNode &mnd = _mem[hdr.h - 1];
+        mnd.remove(frm.c);
+        _fix_underflow(_stg, _mem, frm.lv);
     } else {
-        int lp = pgb.p(c - 1);
-        BNode &ml = max_leaf(pgf, lp);
-        BPageBuf &mlb = ml.buf();
-        BElement e = mlb.remove_max();
-        pgb.set_e(c, e);
-        _fix_leaf(ml);
+        nd.remove(fr.c);
+        _fix_underflow(_stg, _mem, fr.lv);
     }
 }
 
-#endif
 #if 0
 void BTree::_fix_leaf(BNode &pg) {
     if(page_underflows(pg)) {
@@ -179,27 +227,15 @@ void BTree::_fix_leaf(BNode &pg) {
         }
     }
 }
-
-void BTree::_merge(BNode &lp, BNode &rp, BPageBuf &ppgb, int i) {
-    BPageBuf &lpb = lp.buf();
-    BPageBuf &rpb = rp.buf();
-    BElement el = ppgb.e(i);
-    vector<BElement> ve = lpb.ve();
-    ve.push_back(el);
-    ve.insert(ve.end(), rpb.ve().begin(), rpb.ve().end());
-    vector<int> vp = lpb.vp();
-    vp.insert(vp.end(), rpb.vp().begin(), rpb.vp().end());
-    BPageBuf buf{ve, vp};
-    ppgb.emerge(i, lp.idx());
-    // FIXME: Garbage collect @rp
-}
 #endif
 
-static void distribute_l(BNode &lnd, BNode &rnd, BNode &pnd, int i) {
-    assert(false);
+static bool can_compensate(BNode &nda, BNode &ndb) {
+    int sm = nda.m + ndb.m;
+    return sm >= 2 * D && sm <= 4 * D;
+}
 
-    assert(lnd.overflows());
-    assert(!rnd.full());
+static void distribute_l(BNode &lnd, BNode &rnd, BNode &pnd, int i) {
+    assert(can_compensate(lnd, rnd));
 
     int sm = lnd.m + 1 + rnd.m;
     int lm = sm / 2;
@@ -208,7 +244,14 @@ static void distribute_l(BNode &lnd, BNode &rnd, BNode &pnd, int i) {
     BElement me = pnd.e(i);
     rnd.data.front().e = me;
 
-    rnd.data.insert(rnd.data.begin(), lnd.data.begin() + lm + 1, lnd.data.end());
+    auto l1 = lnd.data.begin() + lnd.m + 1;
+    auto r0 = rnd.data.begin();
+    auto r1 = r0 + (lm - lnd.m);
+    auto r2 = r0 + rnd.m + 1;
+
+    copy(r0, r1, l1);
+    copy(r1, r2, r0);
+
     BElement nme = rnd.data.front().e;
     pnd.set_e(i, nme);
 
@@ -217,8 +260,7 @@ static void distribute_l(BNode &lnd, BNode &rnd, BNode &pnd, int i) {
 }
 
 static void distribute_r(BNode &lnd, BNode &rnd, BNode &pnd, int i) {
-    assert(lnd.overflows());
-    assert(!rnd.full());
+    assert(can_compensate(lnd, rnd));
 
     int sm = lnd.m + 1 + rnd.m;
     int lm = sm / 2;
@@ -235,25 +277,34 @@ static void distribute_r(BNode &lnd, BNode &rnd, BNode &pnd, int i) {
     rnd.m = rm;
 }
 
+static void distribute(BNode &lnd, BNode &rnd, BNode &pnd, int i) {
+    assert(lnd.m != rnd.m);
+    if(rnd.m > lnd.m) {
+        distribute_l(lnd, rnd, pnd, i);
+    } else {
+        distribute_r(lnd, rnd, pnd, i);
+    }
+}
+
 CompensateStatus BTree::_compensate(BStorage &stg, BNode &nd, BNode &pnd, BNode &snd) {
     int c = pnd.find_child(nd.idx); // C-index of @p in its parent
 
-    if(c > 0) {
+    if (c > 0) {
         /* Try left sibling */
         int ls = pnd.p(c - 1);
         stg.read_page(snd, ls);
-        if(!snd.full()) {
-            distribute_l(snd, nd, pnd, c);
+        if (can_compensate(snd, nd)) {
+            distribute(snd, nd, pnd, c);
             return COMPENSATE_OK;
         }
     }
 
-    if(c < pnd.m) {
+    if (c < pnd.m) {
         /* Try right sibling */
         int rs = pnd.p(c + 1);
         stg.read_page(snd, rs);
-        if(!snd.full()) {
-            distribute_r(nd, snd, pnd, c + 1);
+        if (can_compensate(snd, nd)) {
+            distribute(nd, snd, pnd, c + 1);
             return COMPENSATE_OK;
         }
     }
@@ -268,6 +319,22 @@ BElement BTree::_split(BNode &nd, BNode &nnd) {
     nd.m = nnd.m = D;
     BElement me = nd.data[D + 1].e;
     return me;
+}
+
+void BTree::_merge(BNode &lp, BNode &rp, int i) {
+#if 0
+    BPageBuf &lpb = lp.buf();
+    BPageBuf &rpb = rp.buf();
+    BElement el = ppgb.e(i);
+    vector<BElement> ve = lpb.ve();
+    ve.push_back(el);
+    ve.insert(ve.end(), rpb.ve().begin(), rpb.ve().end());
+    vector<int> vp = lpb.vp();
+    vp.insert(vp.end(), rpb.vp().begin(), rpb.vp().end());
+    BPageB + 1uf buf{ve, vp};
+    ppgb.emerge(i, lp.idx());
+    // FIXME: Garbage collect @rp
+#endif
 }
 
 void BTree::_for_each(int p, vector<BNode> &mem, int lv, function<void(BElement)> f) {
@@ -301,13 +368,13 @@ void BTree::_dump(int p, int lv) {
     assert(nd.m > 0);
     assert(nd.idx == p);
     cout << "{" << lv << "} " << p << ": [";
-    for(int i = 0; i <= nd.m; ++i) {
-        if(i > 0) {
+    for (int i = 0; i <= nd.m; ++i) {
+        if (i > 0) {
             int x = nd.e(i).x;
             cout << " (" << x << ") ";
         }
         int pi = nd.p(i);
-        if(pi >= 0) {
+        if (pi >= 0) {
             cout << pi;
         } else {
             cout << ".";
@@ -315,9 +382,9 @@ void BTree::_dump(int p, int lv) {
     }
     cout << "]" << endl;
 
-    for(int i = 0; i <= nd.m; ++i) {
+    for (int i = 0; i <= nd.m; ++i) {
         int pi = nd.p(i);
-        if(pi > -1) {
+        if (pi > -1) {
             _dump(pi, lv + 1);
         }
     }

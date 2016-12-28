@@ -12,20 +12,13 @@
 #include "PagedFile.h"
 #include "BStorage.h"
 #include "BNode.h"
+#include "BFindResult.h"
 
 enum CompensateStatus {
     COMPENSATE_OK,
     COMPENSATE_NOT_POSSIBLE
 };
 
-
-class BMem {
-
-};
-
-class BCache {
-
-};
 
 class BTree {
     BStorage &_stg;
@@ -39,23 +32,21 @@ class BTree {
      * @param x key
      * @return (page, value) or (page, NOT_FOUND)
      */
-    pair<int, int> _find(BStorage &stg, vector<BNode> &mem, int lv, int p, int x);
+    BFindResult _find(BStorage &stg, vector<BNode> &mem, int lv, int p, int x);
 
-    void _insert(BStorage &stg, vector<BNode> &mem, int lv, int p, BElement e);
+    BFindResult _find_max(BStorage &stg, vector<BNode> &mem, int lv, int p);
 
     CompensateStatus _compensate(BStorage &stg, BNode &lnd, BNode &pnd, BNode &rnd);
 
     BElement _split(BNode &nd, BNode &nnd);
 
+    void _merge(BNode &nd, BNode &nnd, int i);
+
     void _for_each(int p, vector<BNode> &mem, int lv, function<void(BElement)> f);
 
-    bool page_overflows(BNode &pg);
-
-    bool page_underflows(BNode &pg);
-
-    void _fix_leaf(BNode &pg);
-
     void _fix_overflow(BStorage &stg, std::vector<BNode> &mem, int lv);
+
+    void _fix_underflow(BStorage &stg, std::vector<BNode> &mem, int lv);
 
 public:
     BTree(BStorage &stg);

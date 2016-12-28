@@ -2,11 +2,11 @@
 #define P2_BNODE_H
 
 #include "common.h"
-//#include "BTree.h"
+#include "BFindResult.h"
+#include "BElement.h"
 
 #include <algorithm>
 #include <cassert>
-#include <string>
 #include <vector>
 
 using namespace std;
@@ -33,23 +33,6 @@ struct BEntry {
     }
 };
 #endif
-
-struct BElement {
-    int x = -1; // key
-    int a = -1; // value
-
-    BElement() = default;
-
-    BElement(int _x, int _a) : x(_x), a(_a) {}
-};
-
-inline bool operator<(BElement e1, BElement e2) {
-    return make_pair(e1.x, e1.a) < make_pair(e2.x, e2.a);
-}
-
-inline bool operator==(BElement e1, BElement e2) {
-    return make_pair(e1.x, e1.a) == make_pair(e2.x, e2.a);
-}
 
 #if 0
 class __BPageBuf {
@@ -266,14 +249,14 @@ struct BNode {
         return m < D;
     }
 
-    int find(int x) {
+    BFindResult find(int x) {
         auto it = find_if(data.begin() + 1, data.end(), [&](Ep ep) {
             return ep.e.x == x;
         });
         if (it != data.end()) {
-            return it->e.a;
+            return BFindResult{NIL, it->e, -1, (int) (it - data.begin())};
         } else {
-            return NOT_FOUND;
+            return BFindResult{NIL, {x, NOT_FOUND}, -1, NIL};
         }
     }
 
@@ -285,11 +268,24 @@ struct BNode {
     }
 
     void psplit(int i, int lp, BElement e, int rp) {
-        assert(i > 0 && i <= m);
+        assert(i >= 0 && i <= m);
         Ep ep{e, rp};
         data.insert(data.begin() + i + 1, ep);
         data[i].p = lp;
         ++m;
+    }
+
+    void remove(int i) {
+        assert(is_leaf());
+        assert(i > 0 && i <= m);
+        data.erase(data.begin() + i);
+        --m;
+    }
+
+    void emerge(int i, int p) {
+        assert(i > 0 && i <= m);
+        data.erase(data.begin() + i + 1);
+        data[i].p = p;
     }
 };
 

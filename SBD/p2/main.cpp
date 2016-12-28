@@ -18,16 +18,39 @@ vector<BElement> bt2vec(BTree &bt) {
     return v;
 }
 
+static void dump_vec(const vector<BElement> &v) {
+    cout << "[ ";
+    for(BElement e : v) {
+        cout << e.x << " ";
+    }
+    cout << "]";
+}
+
 static void insert(set<BElement> &s, BTree &bt, BElement e) {
     s.insert(e);
     bt.insert(e.x, e.a);
+}
+
+static void remove(set<BElement> &s, BTree &bt, BElement e) {
+    s.erase(e);
+    bt.remove(e.x);
 }
 
 static void check(const set<BElement> &s, BTree &bt) {
     auto sv = set2vec(s);
     auto btv = bt2vec(bt);
     if(sv != btv) {
+        cout << "sv: ";
+        dump_vec(sv);
+        cout << endl << endl;
+
+        cout << "bt:" << endl;
         bt.dump();
+        cout << endl;
+
+        cout << "btv: ";
+        dump_vec(btv);
+        cout << endl << endl;
     }
     assert(sv == btv);
 }
@@ -191,6 +214,108 @@ static void test_compensate_inner_node() {
     check(s, bt);
 }
 
+static void test_compensate_left() {
+    set<BElement> s{
+            {10, 0}, {1, 0}, {2, 0}, {3, 0}, {11, 0}, {12, 0}, {14, 0}, {15, 0}
+    };
+    MemStorage ms{
+            //s  h  n
+            {0, 2, 3},
+            {
+                    node(0, 1, 1, {10, 0}, 2),
+                    node(1, 3, NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL),
+                    node(2, 4, NIL, {11, 0}, NIL, {12, 0}, NIL, {14, 0}, NIL, {15, 0}, NIL),
+            }
+    };
+    BTree bt{ms};
+    check(s, bt);
+    insert(s, bt, {13, 0});
+    bt.dump();
+    check(s, bt);
+}
+
+static void test_remove_compensate_left() {
+    set<BElement> s{
+            {10, 0}, {1, 0}, {2, 0}, {3, 0}, {11, 0}, {12, 0}
+    };
+    MemStorage ms{
+            //s  h  n
+            {0, 2, 3},
+            {
+                    node(0, 1, 1, {10, 0}, 2),
+                    node(1, 3, NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL),
+                    node(2, 2, NIL, {11, 0}, NIL, {12, 0}, NIL),
+            }
+    };
+    BTree bt{ms};
+    check(s, bt);
+    remove(s, bt, {12, 0});
+    check(s, bt);
+}
+
+static void test_remove_compensate_right() {
+    set<BElement> s{
+            {10, 0}, {1, 0}, {2, 0}, {11, 0}, {12, 0}, {13, 0}
+    };
+    MemStorage ms{
+            //s  h  n
+            {0, 2, 3},
+            {
+                    node(0, 1, 1, {10, 0}, 2),
+                    node(1, 2, NIL, {1, 0}, NIL, {2, 0}, NIL),
+                    node(2, 3, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
+            }
+    };
+    BTree bt{ms};
+    check(s, bt);
+    remove(s, bt, {2, 0});
+    check(s, bt);
+}
+
+static void test_remove_merge() {
+    set<BElement> s{
+            {10, 0}, {20, 0}, {30, 0},
+            {1, 0}, {2, 0},
+            {11, 0}, {12, 0},
+            {21, 0}, {22, 0},
+            {31, 0}, {32, 0},
+    };
+    MemStorage ms{
+            //s  h  n
+            {0, 2, 5},
+            {
+                    node(0, 3, 1, {10, 0}, 2, {20, 0}, 3, {30, 0}, 4),
+                    node(1, 2, NIL, {1, 0}, NIL, {2, 0}, NIL),
+                    node(2, 2, NIL, {11, 0}, NIL, {12, 0}, NIL),
+                    node(3, 2, NIL, {21, 0}, NIL, {22, 0}, NIL),
+                    node(4, 2, NIL, {31, 0}, NIL, {32, 0}, NIL),
+            }
+    };
+    BTree bt{ms};
+    check(s, bt);
+    remove(s, bt, {12, 0});
+    check(s, bt);
+}
+
+static void test_remove_merge_root() {
+    set<BElement> s{
+            {10, 0}, {1, 0}, {2, 0}, {11, 0}, {12, 0}
+    };
+    MemStorage ms{
+            //s  h  n
+            {0, 2, 3},
+            {
+                    node(0, 1, 1, {10, 0}, 2),
+                    node(1, 2, NIL, {1, 0}, NIL, {2, 0}, NIL),
+                    node(2, 2, NIL, {11, 0}, NIL, {12, 0}, NIL),
+            }
+    };
+    BTree bt{ms};
+    check(s, bt);
+    remove(s, bt, {2, 0});
+    check(s, bt);
+}
+
 int main(int argc, const char *argv[]) {
     test_new_root();
     test_insert_simple();
@@ -199,5 +324,10 @@ int main(int argc, const char *argv[]) {
     test_compensate_even();
     test_compensate_odd();
     test_compensate_inner_node();
+    test_compensate_left();
+    test_remove_compensate_left();
+    test_remove_compensate_right();
+    test_remove_merge();
+    test_remove_merge_root();
     return 0;
 }

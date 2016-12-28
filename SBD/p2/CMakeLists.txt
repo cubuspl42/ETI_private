@@ -20,7 +20,8 @@ set(SOURCES
         BStorage.h
         BStorage.cpp
         BTreeHeader.h
-        MemStorage.cpp MemStorage.h)
+        MemStorage.cpp
+        MemStorage.h)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -pedantic -Werror")
 
