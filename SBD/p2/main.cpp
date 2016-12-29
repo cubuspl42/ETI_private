@@ -55,6 +55,21 @@ static void check(const set<BElement> &s, BTree &bt) {
     assert(sv == btv);
 }
 
+static bool check_ms(MemStorage ms, MemStorage ms2) {
+    if(ms != ms2) {
+//        BTree bt{ms};
+//        BTree bt2{ms2};
+        cout << ">>>>" << endl;
+//        bt.dump();
+        ms.dump();
+        cout << "----" << endl;
+//        bt2.dump();
+        ms2.dump();
+        cout << "<<<<" << endl;
+    }
+    return ms == ms2;
+}
+
 static BNode node(
         int idx,
         int m,
@@ -84,9 +99,6 @@ static void test_new_root() {
 }
 
 static void test_insert_simple() {
-    set<BElement> s{
-            {10, 0}, {1, 0}, {2, 0}, {4, 0}, {11, 0}, {12, 0}, {13, 0}
-    };
     MemStorage ms{
             //s  h  n
             {0, 2, 3},
@@ -96,34 +108,43 @@ static void test_insert_simple() {
                     node(2, 3, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
             }
     };
+    const MemStorage ms2{
+            //s  h  n
+            {0, 2, 3},
+            {
+                    node(0, 1, 1, {10, 0}, 2),
+                    node(1, 4, NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
+                    node(2, 3, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
+            }
+    };
     BTree bt{ms};
-    insert(s, bt, {3, 0});
-    check(s, bt);
+    bt.insert(3, 0);
+    assert(check_ms(ms, ms2));
 }
 
 static void test_split_root() {
-    set<BElement> s{{1, 2}, {2, 3}, {3, 4}, {4, 5}};
     MemStorage ms{
             //s  h  n
             {0, 1, 1},
             {
-                    node(0, 4, NIL, {1, 2}, NIL, {2, 3}, NIL, {3, 4}, NIL, {4, 5}, NIL)
+                    node(0, 4, NIL, {1, 2}, NIL, {2, 3}, NIL, {3, 4}, NIL, {4, 5}, NIL),
+            }
+    };
+    const MemStorage ms2{
+            //s  h  n
+            {2, 2, 3},
+            {
+                    node(0, 2, NIL, {1, 2}, NIL, {2, 3}, NIL),
+                    node(1, 2, NIL, {4, 5}, NIL, {5, 6}, NIL),
+                    node(2, 1, 0, {3, 4}, 1),
             }
     };
     BTree bt{ms};
-    insert(s, bt, {5, 6});
-    check(s, bt);
+    bt.insert(5, 6);
+    assert(check_ms(ms, ms2));
 }
 
 static void test_split_chained() {
-    set<BElement> s{
-            {10, 0}, {20, 0}, {30, 0}, {40, 0},
-            {1, 0}, {2, 0}, {3, 0}, {4, 0},
-            {11, 0}, {12, 0}, {13, 0}, {14, 0},
-            {21, 0}, {22, 0}, {24, 0}, {25, 0},
-            {31, 0}, {32, 0}, {33, 0}, {34, 0},
-            {41, 0}, {42, 0}, {43, 0}, {44, 0}
-    };
     MemStorage ms{
             //s  h  n
             {0, 2, 6},
@@ -136,15 +157,27 @@ static void test_split_chained() {
                     node(5, 4, NIL, {41, 0}, NIL, {42, 0}, NIL, {43, 0}, NIL, {44, 0}, NIL),
             }
     };
+    const MemStorage ms2{
+            //s  h  n
+            {8, 3, 9},
+            {
+                    node(0, 2, 1, {10, 0}, 2, {20, 0}, 3),
+                    node(1, 4, NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
+                    node(2, 4, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL, {14, 0}, NIL),
+                    node(3, 2, NIL, {21, 0}, NIL, {22, 0}, NIL),
+                    node(4, 4, NIL, {31, 0}, NIL, {32, 0}, NIL, {33, 0}, NIL, {34, 0}, NIL),
+                    node(5, 4, NIL, {41, 0}, NIL, {42, 0}, NIL, {43, 0}, NIL, {44, 0}, NIL),
+                    node(6, 2, NIL, {24, 0}, NIL, {25, 0}, NIL),
+                    node(7, 2, 6, {30, 0}, 4, {40, 0}, 5),
+                    node(8, 1, 0, {23, 0}, 7),
+            }
+    };
     BTree bt{ms};
-    insert(s, bt, {23, 0});
-    check(s, bt);
+    bt.insert(23, 0);
+    assert(check_ms(ms, ms2));
 }
 
 static void test_compensate_even() {
-    set<BElement> s{
-            {10, 0}, {1, 0}, {2, 0}, {3, 0}, {4, 0}, {11, 0}, {12, 0}
-    };
     MemStorage ms{
             //s  h  n
             {0, 2, 3},
@@ -154,15 +187,21 @@ static void test_compensate_even() {
                     node(2, 2, NIL, {11, 0}, NIL, {12, 0}, NIL),
             }
     };
+    const MemStorage ms2{
+            //s  h  n
+            {0, 2, 3},
+            {
+                    node(0, 1, 1, {5, 0}, 2),
+                    node(1, 4, NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
+                    node(2, 3, NIL, {10, 0}, NIL, {11, 0}, NIL, {12, 0}, NIL),
+            }
+    };
     BTree bt{ms};
-    insert(s, bt, {5, 0});
-    check(s, bt);
+    bt.insert(5, 0);
+    assert(check_ms(ms, ms2));
 }
 
 static void test_compensate_odd() {
-    set<BElement> s{
-            {10, 0}, {1, 0}, {2, 0}, {4, 0}, {5, 0}, {11, 0}, {12, 0}, {13, 0}
-    };
     MemStorage ms{
             //s  h  n
             {0, 2, 3},
@@ -172,25 +211,21 @@ static void test_compensate_odd() {
                     node(2, 3, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
             }
     };
+    const MemStorage ms2{
+            //s  h  n
+            {0, 2, 3},
+            {
+                    node(0, 1, 1, {5, 0}, 2),
+                    node(1, 4, NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
+                    node(2, 4, NIL, {10, 0}, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
+            }
+    };
     BTree bt{ms};
-    insert(s, bt, {3, 0});
-    check(s, bt);
+    bt.insert(3, 0);
+    assert(check_ms(ms, ms2));
 }
 
 static void test_compensate_inner_node() {
-    set<BElement> s{
-            {100, 0},
-            {10, 0}, {20, 0}, {30, 0}, {40, 0},
-            {210, 0}, {220, 0},
-            {1, 0}, {2, 0}, {3, 0}, {4, 0},
-            {11, 0}, {12, 0}, {13, 0}, {14, 0},
-            {21, 0}, {22, 0}, {23, 0}, {24, 0},
-            {31, 0}, {32, 0}, {33, 0}, {34, 0},
-            {41, 0}, {42, 0}, {43, 0}, {44, 0},
-            {201, 0}, {202, 0}, {203, 0}, {204, 0},
-            {211, 0}, {212, 0}, {213, 0}, {214, 0},
-            {221, 0}, {222, 0}, {223, 0}, {224, 0},
-    };
     MemStorage ms{
             //s  h  n
             {0, 3, 11},
@@ -208,16 +243,30 @@ static void test_compensate_inner_node() {
                     node(10, 4, NIL, {221, 0}, NIL, {222, 0}, NIL, {223, 0}, NIL, {224, 0}, NIL),
             }
     };
+    const MemStorage ms2{
+            //s  h  n
+            {0, 3, 12},
+            {
+                    node(0, 1, 1, {40, 0}, 2),
+                    node(1, 4, 3, {10, 0}, 4, {20, 0}, 5, {23, 0}, 11, {30, 0}, 6),
+                    node(2, 3, 7, {100, 0}, 8, {210, 0}, 9, {220, 0}, 10),
+                    node(3, 4, NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
+                    node(4, 4, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL, {14, 0}, NIL),
+                    node(5, 2, NIL, {21, 0}, NIL, {22, 0}, NIL),
+                    node(6, 4, NIL, {31, 0}, NIL, {32, 0}, NIL, {33, 0}, NIL, {34, 0}, NIL),
+                    node(7, 4, NIL, {41, 0}, NIL, {42, 0}, NIL, {43, 0}, NIL, {44, 0}, NIL),
+                    node(8, 4, NIL, {201, 0}, NIL, {202, 0}, NIL, {203, 0}, NIL, {204, 0}, NIL),
+                    node(9, 4, NIL, {211, 0}, NIL, {212, 0}, NIL, {213, 0}, NIL, {214, 0}, NIL),
+                    node(10, 4, NIL, {221, 0}, NIL, {222, 0}, NIL, {223, 0}, NIL, {224, 0}, NIL),
+                    node(11, 2, NIL, {24, 0}, NIL, {25, 0}, NIL),
+            }
+    };
     BTree bt{ms};
-    check(s, bt);
-    insert(s, bt, {25, 0});
-    check(s, bt);
+    bt.insert(25, 0);
+    assert(check_ms(ms, ms2));
 }
 
 static void test_compensate_left() {
-    set<BElement> s{
-            {10, 0}, {1, 0}, {2, 0}, {3, 0}, {11, 0}, {12, 0}, {14, 0}, {15, 0}
-    };
     MemStorage ms{
             //s  h  n
             {0, 2, 3},
@@ -227,17 +276,21 @@ static void test_compensate_left() {
                     node(2, 4, NIL, {11, 0}, NIL, {12, 0}, NIL, {14, 0}, NIL, {15, 0}, NIL),
             }
     };
+    const MemStorage ms2{
+            //s  h  n
+            {0, 2, 3},
+            {
+                    node(0, 1, 1, {11, 0}, 2),
+                    node(1, 4, NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {10, 0}, NIL),
+                    node(2, 4, NIL, {12, 0}, NIL, {13, 0}, NIL, {14, 0}, NIL, {15, 0}, NIL),
+            }
+    };
     BTree bt{ms};
-    check(s, bt);
-    insert(s, bt, {13, 0});
-    bt.dump();
-    check(s, bt);
+    bt.insert(13, 0);
+    assert(check_ms(ms, ms2));
 }
 
 static void test_remove_compensate_left() {
-    set<BElement> s{
-            {10, 0}, {1, 0}, {2, 0}, {3, 0}, {11, 0}, {12, 0}
-    };
     MemStorage ms{
             //s  h  n
             {0, 2, 3},
@@ -247,16 +300,21 @@ static void test_remove_compensate_left() {
                     node(2, 2, NIL, {11, 0}, NIL, {12, 0}, NIL),
             }
     };
+    const MemStorage ms2{
+            //s  h  n
+            {0, 2, 3},
+            {
+                    node(0, 1, 1, {3, 0}, 2),
+                    node(1, 2, NIL, {1, 0}, NIL, {2, 0}, NIL),
+                    node(2, 2, NIL, {10, 0}, NIL, {11, 0}, NIL),
+            }
+    };
     BTree bt{ms};
-    check(s, bt);
-    remove(s, bt, {12, 0});
-    check(s, bt);
+    bt.remove(12);
+    assert(check_ms(ms, ms2));
 }
 
 static void test_remove_compensate_right() {
-    set<BElement> s{
-            {10, 0}, {1, 0}, {2, 0}, {11, 0}, {12, 0}, {13, 0}
-    };
     MemStorage ms{
             //s  h  n
             {0, 2, 3},
@@ -266,20 +324,21 @@ static void test_remove_compensate_right() {
                     node(2, 3, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
             }
     };
+    const MemStorage ms2{
+            //s  h  n
+            {0, 2, 3},
+            {
+                    node(0, 1, 1, {11, 0}, 2),
+                    node(1, 2, NIL, {1, 0}, NIL, {10, 0}, NIL),
+                    node(2, 2, NIL, {12, 0}, NIL, {13, 0}, NIL),
+            }
+    };
     BTree bt{ms};
-    check(s, bt);
-    remove(s, bt, {2, 0});
-    check(s, bt);
+    bt.remove(2);
+    assert(check_ms(ms, ms2));
 }
 
 static void test_remove_merge() {
-    set<BElement> s{
-            {10, 0}, {20, 0}, {30, 0},
-            {1, 0}, {2, 0},
-            {11, 0}, {12, 0},
-            {21, 0}, {22, 0},
-            {31, 0}, {32, 0},
-    };
     MemStorage ms{
             //s  h  n
             {0, 2, 5},
@@ -291,10 +350,19 @@ static void test_remove_merge() {
                     node(4, 2, NIL, {31, 0}, NIL, {32, 0}, NIL),
             }
     };
+    const MemStorage ms2{
+            //s  h  n
+            {0, 2, 5},
+            {
+                    node(0, 2, 1, {20, 0}, 3, {30, 0}, 4),
+                    node(1, 4, NIL, {1, 0}, NIL, {2, 0}, NIL, {10, 0}, NIL, {11, 0}, NIL),
+                    node(3, 2, NIL, {21, 0}, NIL, {22, 0}, NIL),
+                    node(4, 2, NIL, {31, 0}, NIL, {32, 0}, NIL),
+            }
+    };
     BTree bt{ms};
-    check(s, bt);
-    remove(s, bt, {12, 0});
-    check(s, bt);
+    bt.remove(12);
+    assert(check_ms(ms, ms2));
 }
 
 static void test_remove_merge_root() {

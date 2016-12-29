@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cassert>
 #include <vector>
+#include <iostream>
 
 using namespace std;
 
@@ -179,6 +180,10 @@ public:
 struct Ep {
     BElement e;
     int p;
+
+    bool operator==(const Ep &o) const {
+        return e == o.e && p == o.p;
+    }
 };
 
 inline bool operator<(Ep e1, Ep e2) {
@@ -286,6 +291,20 @@ struct BNode {
         assert(i > 0 && i <= m);
         data.erase(data.begin() + i + 1);
         data[i].p = p;
+    }
+
+    bool operator==(const BNode &o) const {
+        auto begin = data.begin();
+        auto end = data.begin() + m + 1;
+        return idx == o.idx && m == o.m && equal(begin, end, o.data.begin());
+    }
+
+    void dump() const {
+        cout << "idx: " << idx << " m: " << m << " [ ";
+        for(Ep ep : data) {
+            cout << "(" << ep.e.x << ", " << ep.e.a << ") " << ep.p << " ";
+        }
+        cout << "]";
     }
 };
 

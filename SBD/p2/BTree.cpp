@@ -76,6 +76,7 @@ void BTree::_fix_overflow(BStorage &stg, vector<BNode> &mem, int lv) {
 
         _stg.write_page(nd);
         _stg.write_page(exnd);
+        _stg.write_header(hdr); // TODO: When to write header?
 
         if (lv == 0) {
             exnd.idx = hdr.n++;
@@ -83,6 +84,7 @@ void BTree::_fix_overflow(BStorage &stg, vector<BNode> &mem, int lv) {
             exnd.data[0] = Ep{BElement{-1, -1}, nd.idx};
             exnd.data[1] = Ep{me, nnd_idx};
             hdr.s = exnd.idx;
+            ++hdr.h; // TODO: Extract! Resize mem?
             _stg.write_header(hdr);
             _stg.write_page(exnd);
         } else {
@@ -255,6 +257,9 @@ static void distribute_l(BNode &lnd, BNode &rnd, BNode &pnd, int i) {
     BElement nme = rnd.data.front().e;
     pnd.set_e(i, nme);
 
+    lnd.data.front().e = BElement{};
+    rnd.data.front().e = BElement{};
+
     lnd.m = lm;
     rnd.m = rm;
 }
@@ -272,6 +277,9 @@ static void distribute_r(BNode &lnd, BNode &rnd, BNode &pnd, int i) {
     rnd.data.insert(rnd.data.begin(), lnd.e_begin() + lm, lnd.e_end());
     BElement nme = rnd.data.front().e;
     pnd.set_e(i, nme);
+
+    lnd.data.front().e = BElement{};
+    rnd.data.front().e = BElement{};
 
     lnd.m = lm;
     rnd.m = rm;
@@ -318,6 +326,7 @@ BElement BTree::_split(BNode &nd, BNode &nnd) {
     copy(nd.data.begin() + D + 1, nd.data.end(), nnd.data.begin());
     nd.m = nnd.m = D;
     BElement me = nd.data[D + 1].e;
+    nnd.data.front().e = BElement{};
     return me;
 }
 

@@ -9,6 +9,10 @@ struct BTreeHeader {
     int s = NIL; // root
     int h = 0; // tree height
     int n = 0; // node count
+
+    bool operator==(const BTreeHeader &o) {
+        return s == o.s && h == o.h && n == o.n;
+    }
 };
 
 #endif //P2_BTREEHEADER_H

@@ -23,6 +23,12 @@ public:
     virtual void read_page(BNode &pg, int i) override;
 
     virtual void write_page(const BNode &pg) override;
+
+    bool operator==(const MemStorage &o);
+
+    bool operator!=(const MemStorage &o);
+
+    void dump();
 };
 
 
