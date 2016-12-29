@@ -78,7 +78,7 @@ void BTree::_fix_overflow(BStorage &stg, vector<BNode> &mem, int lv) {
         _stg.write_page(exnd);
         _stg.write_header(hdr); // TODO: When to write header?
 
-        if (lv == 0) {
+        if (lv == 0) { // TODO: Refactor -> _grow_tree
             exnd.idx = hdr.n++;
             exnd.m = 1;
             exnd.data[0] = Ep{BElement{-1, -1}, nd.idx};
@@ -119,27 +119,28 @@ void BTree::_fix_underflow(BStorage &stg, std::vector<BNode> &mem, int lv) {
                 return;
             }
 
-            int c = pnd.find_child(nd.idx);
-            if (c < pnd.m) {
-                int pr = pnd.p(c + 1);
-//                BElement e = pnd.e(c + 1);
-                stg.read_page(exnd, pr);
-                _merge(nd, exnd, c + 1);
-            } else {
-                assert(c > 0);
-                int pl = pnd.p(c - 1);
-//                BElement e = pnd.e(c);
+            int pi = pnd.find_child(nd.idx);
+
+
+            if(pi > 0) {
+                assert(pi > 0);
+                int pl = pnd.p(pi - 1);
+                int ei = pi;
                 stg.read_page(exnd, pl);
-                _merge(exnd, nd, c);
+                _merge(exnd, nd, pnd, ei);
+            } else {
+                assert(pi < pnd.m);
+                int pr = pnd.p(pi + 1);
+                int ei = pi + 1;
+                stg.read_page(exnd, pr);
+                _merge(nd, exnd, pnd, ei);
+            }
+
+            if(lv == 1 && pnd.m == 0) {
+                _shrink(pnd);
             }
 
             _fix_underflow(stg, mem, lv - 1);
-        }
-
-    } else {
-        assert(lv == 0);
-        if(nd.m == 0) {
-            // FIXME: reroot
         }
     }
 
@@ -330,7 +331,27 @@ BElement BTree::_split(BNode &nd, BNode &nnd) {
     return me;
 }
 
-void BTree::_merge(BNode &lp, BNode &rp, int i) {
+void BTree::_merge(BNode &lp, BNode &rp, BNode &pnd, int ei) {
+    BElement pe = pnd.e(ei);
+    rp.data.front().e = pe;
+
+    auto l1 = lp.data.begin() + lp.m + 1;
+    auto r1 = rp.data.begin();
+    auto r2 = r1 + rp.m + 1;
+    copy(r1, r2, l1);
+
+    rp.data.front().e = BElement{};
+
+    lp.m = lp.m + 1 + rp.m;
+    rp.m = 0;
+
+    pnd.emerge(ei, lp.idx);
+
+    _stg.write_page(lp); // TOOD: Minimize page writes?
+    _stg.write_page(rp);
+
+    // TODO: Delete @rp
+
 #if 0
     BPageBuf &lpb = lp.buf();
     BPageBuf &rpb = rp.buf();
@@ -406,4 +427,17 @@ void BTree::dump() {
 BTree::BTree(BStorage &stg) : _stg{stg} {
     hdr = stg.read_header();
     _mem.resize(hdr.h + 1);
+}
+
+void BTree::_shrink(BNode &rnd) {
+    assert(rnd.m == 0);
+    int p0 = rnd.p(0);
+    assert(p0 != NIL);
+
+    rnd.data.front() = Ep{BElement{}, NIL};
+
+    --hdr.h;
+    hdr.s = p0;
+
+    _stg.write_header(hdr);
 }

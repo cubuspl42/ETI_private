@@ -40,7 +40,7 @@ class BTree {
 
     BElement _split(BNode &nd, BNode &nnd);
 
-    void _merge(BNode &nd, BNode &nnd, int i);
+    void _merge(BNode &nd, BNode &nnd, BNode &pnd, int ei);
 
     void _for_each(int p, vector<BNode> &mem, int lv, function<void(BElement)> f);
 
@@ -78,6 +78,7 @@ public:
     void dump();
 
 //    void _merge(BNode &lp, BNode &rp, BPageBuf &ppgb, int i);
+    void _shrink(BNode &rnd);
 };
 
 #endif //P2_INDEXFILE_H

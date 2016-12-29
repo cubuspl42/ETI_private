@@ -31,11 +31,6 @@ static void insert(set<BElement> &s, BTree &bt, BElement e) {
     bt.insert(e.x, e.a);
 }
 
-static void remove(set<BElement> &s, BTree &bt, BElement e) {
-    s.erase(e);
-    bt.remove(e.x);
-}
-
 static void check(const set<BElement> &s, BTree &bt) {
     auto sv = set2vec(s);
     auto btv = bt2vec(bt);
@@ -356,6 +351,7 @@ static void test_remove_merge() {
             {
                     node(0, 2, 1, {20, 0}, 3, {30, 0}, 4),
                     node(1, 4, NIL, {1, 0}, NIL, {2, 0}, NIL, {10, 0}, NIL, {11, 0}, NIL),
+                    node(2, 0, NIL),
                     node(3, 2, NIL, {21, 0}, NIL, {22, 0}, NIL),
                     node(4, 2, NIL, {31, 0}, NIL, {32, 0}, NIL),
             }
@@ -378,10 +374,18 @@ static void test_remove_merge_root() {
                     node(2, 2, NIL, {11, 0}, NIL, {12, 0}, NIL),
             }
     };
+    const MemStorage ms2{
+            //s  h  n
+            {1, 1, 3},
+            {
+                    node(0, 0, NIL),
+                    node(1, 4, NIL, {1, 0}, NIL, {10, 0}, NIL, {11, 0}, NIL, {12, 0}, NIL),
+                    node(2, 0, NIL),
+            }
+    };
     BTree bt{ms};
-    check(s, bt);
-    remove(s, bt, {2, 0});
-    check(s, bt);
+    bt.remove(2);
+    assert(check_ms(ms, ms2));
 }
 
 int main(int argc, const char *argv[]) {

@@ -287,10 +287,11 @@ struct BNode {
         --m;
     }
 
-    void emerge(int i, int p) {
-        assert(i > 0 && i <= m);
-        data.erase(data.begin() + i + 1);
-        data[i].p = p;
+    void emerge(int ei, int p) {
+        assert(ei > 0 && ei <= m);
+        data.erase(data.begin() + ei);
+        data[ei - 1].p = p;
+        --m;
     }
 
     bool operator==(const BNode &o) const {
