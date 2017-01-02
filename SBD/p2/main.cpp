@@ -362,9 +362,6 @@ static void test_remove_merge() {
 }
 
 static void test_remove_merge_root() {
-    set<BElement> s{
-            {10, 0}, {1, 0}, {2, 0}, {11, 0}, {12, 0}
-    };
     MemStorage ms{
             //s  h  n
             {0, 2, 3},
@@ -388,6 +385,31 @@ static void test_remove_merge_root() {
     assert(check_ms(ms, ms2));
 }
 
+
+static void test_remove_swap() {
+    MemStorage ms{
+            //s  h  n
+            {0, 2, 3},
+            {
+                    node(0, 1, 1, {10, 0}, 2),
+                    node(1, 4, NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
+                    node(2, 4, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL, {14, 0}, NIL),
+            }
+    };
+    const MemStorage ms2{
+            //s  h  n
+            {0, 2, 3},
+            {
+                    node(0, 1, 1, {4, 0}, 2),
+                    node(1, 3, NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL),
+                    node(2, 4, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL, {14, 0}, NIL),
+            }
+    };
+    BTree bt{ms};
+    bt.remove(10);
+    assert(check_ms(ms, ms2));
+}
+
 int main(int argc, const char *argv[]) {
     test_new_root();
     test_insert_simple();
@@ -401,5 +423,6 @@ int main(int argc, const char *argv[]) {
     test_remove_compensate_right();
     test_remove_merge();
     test_remove_merge_root();
+    test_remove_swap();
     return 0;
 }
