@@ -190,12 +190,16 @@ inline bool operator<(Ep e1, Ep e2) {
     return e1.e < e2.e;
 }
 
+static const size_t NODE_DATA_MEMORY_SIZE = 2 * D + 2;
+
 struct BNode {
     int idx = NIL;
     int m = 0;
     vector<Ep> data;
 
-    BNode() : data(D * 2 + 2) {}
+    BNode() {
+        data.resize(NODE_DATA_MEMORY_SIZE); // front pseudo-element + 2*D elements + extra element
+    }
 
     BElement e(int i) const {
         assert(i > 0 && i <= m);
@@ -267,17 +271,21 @@ struct BNode {
 
     void insert(BElement e) {
         assert(is_leaf());
-        assert(m < (int) data.size());
-        data[++m] = Ep{e, NIL};
+        assert(!overflows());
+        data.insert(data.begin() + m + 1, Ep{e, NIL});
+        ++m;
         sort(e_begin(), e_end()); // FIXME: last element? m?
+        data.resize(NODE_DATA_MEMORY_SIZE);
     }
 
     void psplit(int i, int lp, BElement e, int rp) {
+        assert(!overflows());
         assert(i >= 0 && i <= m);
         Ep ep{e, rp};
         data.insert(data.begin() + i + 1, ep);
         data[i].p = lp;
         ++m;
+        data.resize(NODE_DATA_MEMORY_SIZE);
     }
 
     void remove(int i) {

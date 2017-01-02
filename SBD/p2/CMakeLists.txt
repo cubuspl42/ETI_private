@@ -3,7 +3,6 @@ set(PROJECT p2)
 project(${PROJECT})
 
 set(SOURCES
-        main.cpp
         PagedFile.h
         PagedFile.cpp
         BNode.h
@@ -17,12 +16,13 @@ set(SOURCES
         common.h
         ContentFile.cpp
         ContentFile.h
-        BStorage.h
-        BStorage.cpp
+        BTreeStorage.h
+        BTreeStorage.cpp
         BTreeHeader.h
         MemStorage.cpp
-        MemStorage.h)
+        MemStorage.h FileStorage.cpp FileStorage.h)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -pedantic -Werror")
 
-add_executable(${PROJECT} ${SOURCES})
+add_executable(${PROJECT} ${SOURCES} main.cpp)
+add_executable(${PROJECT}_test ${SOURCES} test.cpp)

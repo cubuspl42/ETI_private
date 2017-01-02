@@ -1,24 +1,30 @@
 #include "IndexedFile.h"
 
-#if 0
+
 IndexedFile::IndexedFile(string path)
-        : cf{path} {
-}
+        : storage{path + "_index"}, index{storage}, content{path} {}
 
 void IndexedFile::insert(Record r) {
-    int x = (int) r.pkey(); // FIXME: i64
-    if(bt.find(x) == NOT_FOUND) {
-        int a = cf.write_record(r);
-        bt.insert(x, a);
-    }
+    int x = (int) r.pkey();// FIXME: i64
+    // FIXME: user-selected key, not eq from p1
+    assert(index.find(x) == NOT_FOUND); // FIXME: assert
+    int a = content.write_record(r);
+    index.insert(x, a);
+}
+
+bool IndexedFile::contains(Record r) {
+    return index.find((int) r.pkey()) != NOT_FOUND;
 }
 
 void IndexedFile::for_each(function<void(Record)> f) {
-    bt.for_each([&](pair<int, int> xa) {
-        Record r = cf.read_record(xa.second);
+    // TODO: implement
+#if 0
+    index.for_each([&](pair<int, int> xa) {
+        Record r = content.read_record(xa.second);
         assert(r.pkey() == xa.first);
         f(r);
     });
+#endif
 }
 
 vector<Record> IndexedFile::to_vector() {
@@ -30,10 +36,12 @@ vector<Record> IndexedFile::to_vector() {
 }
 
 void IndexedFile::dump() {
-    bt.dump();
+    cout << "storage.dump:" << endl;
+    storage.dump();
+    cout << "index.dump:" << endl;
+    index.dump();
 }
 
 IndexedFile tmp_indexed_file() {
     return IndexedFile(tmpnam(nullptr));
 }
-#endif

@@ -5,19 +5,23 @@
 #include "Record.h"
 #include "BTree.h"
 #include "ContentFile.h"
+#include "FileStorage.h"
 
 #include <string>
 
 using namespace std;
 
 class IndexedFile {
-    BTree bt;
-    ContentFile cf;
+    FileStorage storage;
+    BTree index;
+    ContentFile content;
 public:
     IndexedFile() = delete;
     IndexedFile(string path);
 
     void insert(Record r);
+
+    bool contains(Record r);
 
     void for_each(function<void(Record)> f);
 

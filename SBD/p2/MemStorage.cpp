@@ -3,8 +3,7 @@
 //
 
 #include "MemStorage.h"
-
-#include <iostream>
+#include "BTreeStorage.h"
 
 BTreeHeader MemStorage::read_header() {
     return _hdr;
@@ -37,12 +36,3 @@ bool MemStorage::operator!=(const MemStorage &o) {
     return !(*this == o);
 }
 
-void MemStorage::dump() {
-    cout << "s: " << _hdr.s << " h: " << _hdr.h << " n: " << _hdr.n << endl;
-    for(size_t i = 0; i < _nodes.size(); ++i) {
-        cout << i << ": ";
-        const BNode &nd = _nodes[i];
-        nd.dump();
-        cout << endl;
-    }
-}

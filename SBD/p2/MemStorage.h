@@ -6,9 +6,9 @@
 #define P2_MEMSTORAGE_H
 
 
-#include "BStorage.h"
+#include "BTreeStorage.h"
 
-class MemStorage : public BStorage {
+class MemStorage : public BTreeStorage {
     BTreeHeader _hdr;
     vector<BNode> _nodes;
 public:
@@ -28,7 +28,6 @@ public:
 
     bool operator!=(const MemStorage &o);
 
-    void dump();
 };
 
 
