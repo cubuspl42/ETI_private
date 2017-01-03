@@ -76,6 +76,14 @@ public:
      */
     int remove(int x);
 
+    /**
+     * Update element
+     * @param x key
+     * @param na new value
+     * @return old value
+     */
+    int update(int x, int na);
+
     void for_each(function<void(BElement)> f);
 
     void _dump(int p, int i);

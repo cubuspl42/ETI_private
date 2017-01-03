@@ -645,6 +645,30 @@ static void test_remove_root() {
     assert(check_ms2(ms, ms2, bt));
 }
 
+static void test_update_simple() {
+    MemStorage ms{
+            //s  h  n
+            {0, 2, 3},
+            {
+                    node(0, 1, 1, {10, 0}, 2),
+                    node(1, 4, NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
+                    node(2, 4, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 123}, NIL, {14, 0}, NIL),
+            }
+    };
+    const MemStorage ms2{
+            //s  h  n
+            {0, 2, 3},
+            {
+                    node(0, 1, 1, {10, 0}, 2),
+                    node(1, 4, NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
+                    node(2, 4, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 124}, NIL, {14, 0}, NIL),
+            }
+    };
+    BTree bt{ms};
+    assert(bt.update(13, 124) == 123);
+    assert(check_ms2(ms, ms2, bt));
+}
+
 int main(int argc, const char *argv[]) {
     test_find_simple();
     test_find_not_found();
@@ -669,5 +693,6 @@ int main(int argc, const char *argv[]) {
     test_remove_merge_root();
     test_remove_swap();
     test_remove_root();
+    test_update_simple();
     return 0;
 }

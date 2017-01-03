@@ -225,6 +225,16 @@ int BTree::remove(int x) {
     }
 }
 
+int BTree::update(int x, int na) {
+    _resize_mem();
+    auto fr = _find(_stg, _mem, 0, hdr.s, x);
+    assert(fr.e.a != NOT_FOUND);
+    BNode &nd = _mem[fr.lv];
+    nd.set_e(fr.c, BElement{x, na});
+    _stg.write_page(nd);
+    return fr.e.a;
+}
+
 #if 0
 void BTree::_fix_leaf(BNode &pg) {
     if(page_underflows(pg)) {
