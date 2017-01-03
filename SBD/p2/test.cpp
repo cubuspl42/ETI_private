@@ -50,19 +50,19 @@ static void check(const set<BElement> &s, BTree &bt) {
     assert(sv == btv);
 }
 
-static bool check_ms(MemStorage ms, MemStorage ms2) {
-    if(ms != ms2) {
+static bool check_ms(MemStorage ac, MemStorage ex) {
+    if(ac != ex) {
 //        BTree bt{ms};
 //        BTree bt2{ms2};
-        cout << ">>>>" << endl;
+        cout << ">>>> actual" << endl;
 //        bt.dump();
-        ms.dump();
+        ac.dump();
         cout << "----" << endl;
 //        bt2.dump();
-        ms2.dump();
-        cout << "<<<<" << endl;
+        ex.dump();
+        cout << "<<<< expected" << endl;
     }
-    return ms == ms2;
+    return ac == ex;
 }
 
 static BNode node(
@@ -233,7 +233,72 @@ static void test_insert_stairs2() {
     assert(check_ms(ms, ms2));
 }
 
+static void test_insert_stairs3() {
+    MemStorage ms{
+            //s  h  n
+            {NIL, 0, 0},
+            {}
+    };
+    const MemStorage ms2{
+            //s  h  n
+            {2, 2, 4},
+            {
+                    node(0, 4, NIL, {10, 0}, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
+                    node(1, 2, NIL, {20, 0}, NIL, {21, 0}, NIL),
+                    node(2, 2, 0, {14, 0}, 1, {22, 0}, 3),
+                    node(3, 2, NIL, {30, 0}, NIL, {40, 0}, NIL)
+            }
+    };
+    BTree bt{ms};
+    bt.insert(10, 0);
+    bt.insert(20, 0);
+    bt.insert(30, 0);
+    bt.insert(40, 0);
+    bt.insert(11, 0);
+    bt.insert(12, 0);
+    bt.insert(13, 0);
+    bt.insert(14, 0);
+    bt.insert(21, 0);
+    bt.insert(22, 0);
+    assert(check_ms(ms, ms2));
+}
 
+static void test_insert_stairs4() {
+    MemStorage ms{
+            //s  h  n
+            {NIL, 0, 0},
+            {}
+    };
+    const MemStorage ms2{
+            //s  h  n
+            {2, 2, 4},
+            {
+                    node(0, 4, NIL, {10, 0}, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
+                    node(1, 4, NIL, {20, 0}, NIL, {21, 0}, NIL, {22, 0}, NIL, {23, 0}, NIL ),
+                    node(2, 2, 0, {14, 0}, 1, {24, 0}, 3),
+                    node(3, 3, NIL, {30, 0}, NIL, {31, 0}, NIL, {40, 0}, NIL)
+            }
+    };
+    BTree bt{ms};
+    bt.insert(10, 0);
+    bt.insert(20, 0);
+    bt.insert(30, 0);
+    bt.insert(40, 0);
+    bt.insert(11, 0);
+    bt.insert(12, 0);
+    bt.insert(13, 0);
+    bt.insert(14, 0);
+    bt.insert(21, 0);
+    bt.insert(22, 0);
+    bt.insert(23, 0);
+    bt.insert(24, 0);
+    bt.insert(31, 0);
+    // bt.insert(32, 0);
+    // bt.insert(33, 0);
+    // bt.insert(34, 0);
+    // bt.insert(25, 0);
+    assert(check_ms(ms, ms2));
+}
 
 static void test_split_chained() {
     MemStorage ms{
@@ -513,6 +578,8 @@ int main(int argc, const char *argv[]) {
     test_insert_full();
     test_insert_stairs();
     test_insert_stairs2();
+    test_insert_stairs3();
+    test_insert_stairs4();
     test_split_root();
     test_split_chained();
     test_compensate_even();

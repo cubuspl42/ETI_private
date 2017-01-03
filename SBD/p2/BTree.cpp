@@ -93,9 +93,7 @@ void BTree::_fix_overflow(BTreeStorage &stg, vector<BNode> &mem, int lv) {
             int c = pnd.find_child(nd.idx);
             pnd.psplit(c, nd.idx, me, nnd_idx);
 
-            if (pnd.overflows()) {
-                _fix_overflow(stg, mem, lv - 1);
-            }
+            _fix_overflow(stg, mem, lv - 1);
         }
     }
 
@@ -280,6 +278,8 @@ static void distribute_r(BNode &lnd, BNode &rnd, BNode &pnd, int i) {
     rnd.data.front().e = me;
 
     rnd.data.insert(rnd.data.begin(), lnd.e_begin() + lm, lnd.e_end());
+    rnd.data.resize(NODE_DATA_MEMORY_SIZE);
+
     BElement nme = rnd.data.front().e;
     pnd.set_e(i, nme);
 
