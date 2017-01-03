@@ -14,7 +14,7 @@
 #include <memory>
 #include <fstream>
 #include <math.h>
-#include <set>
+#include <map>
 
 #define DBG 0
 #if DBG
@@ -37,40 +37,41 @@ void die(string message) {
     exit(1);
 }
 
-vector<Record> read_records(istream &is, int n) {
-    vector<Record> v;
+vector<pair<int, Record>> read_records(istream &is, int n) {
+    vector<pair<int, Record>> v;
     for (int i = 0; i < n; ++i) {
+        int k;
         Record r;
-        is >> r;
-        v.push_back(r);
+        is >> k >> r;
+        v.push_back({k, r});
     }
     return v;
 }
 
-static vector<Record> set2vec(const set<Record> &s) {
-    vector<Record> v;
+static vector<pair<int, Record>> map2vec(const map<int, Record> &s) {
+    vector<pair<int, Record>> v;
     std::copy(s.begin(), s.end(), std::back_inserter(v));
     return v;
 }
 
-static vector<Record> idf2vec(IndexedFile &idf) {
-    vector<Record> v;
-    idf.for_each([&](Record r) {
-        v.push_back(r);
+static vector<pair<int, Record>> idf2vec(IndexedFile &idf) {
+    vector<pair<int, Record>> v;
+    idf.for_each([&](int k, Record r) {
+        v.push_back({k, r});
     });
     return v;
 }
 
-static void dump_vec(const vector<Record> &v) {
+static void dump_vec(const vector<pair<int, Record>> &v) {
     cout << "[ ";
-    for(Record r : v) {
-        cout << r << " ";
+    for(auto p : v) {
+        cout << p.first << ":" << p.second << " ";
     }
     cout << "]";
 }
 
-static void check(const set<Record> &s, IndexedFile &idf) {
-    auto sv = set2vec(s);
+static void check(const map<int, Record> &s, IndexedFile &idf) {
+    auto sv = map2vec(s);
     auto btv = idf2vec(idf);
     if(sv != btv) {
         cout << "sv: ";
@@ -89,44 +90,51 @@ static void check(const set<Record> &s, IndexedFile &idf) {
 }
 
 void exec_commands(IndexedFile &idf, istream &is_cmd) {
-    set<Record> s;
+    map<int, Record> m;
     while (is_cmd.good()) {
         string cmd;
         is_cmd >> cmd;
 
         if (cmd == "insert") {
+            int k;
             Record r;
-            is_cmd >> r;
+            is_cmd >> k >> r;
             assert(!is_cmd.fail());
-            cout << "INSERT " << r << endl;
-            idf.insert(r);
-            s.insert(r);
-            check(s, idf);
+            cout << "INSERT " << k << " -> " << r << endl;
+            idf.insert(k, r);
+            m.insert({k, r});
+            check(m, idf);
         } else if (cmd == "remove") {
-            Record r;
-            is_cmd >> r;
+            int k;
+            is_cmd >> k;
             assert(!is_cmd.fail());
-            cout << "REMOVE " << r << endl;
-            idf.remove(r);
-            s.erase(r);
-            check(s, idf);
+            cout << "REMOVE " << k << endl;
+            Record r = idf.remove(k);
+            cout << "Record removed: " << r << endl;
+            m.erase(k);
+            check(m, idf);
         } else if (cmd == "find") {
-            Record r;
-            is_cmd >> r;
+            int k;
+            is_cmd >> k;
             assert(!is_cmd.fail());
-            cout << "FIND " << r << endl;
-            bool b = idf.contains(r);
-            cout << b << endl;
-            check(s, idf);
+            cout << "FIND " << k << endl;
+            auto p = idf.find(k);
+            if(p.first) {
+                cout << "Record found: " << p.second << endl;
+            } else {
+                cout << "Record not found" << endl;
+            }
+            check(m, idf);
         } else if (cmd == "check") {
             int n;
             is_cmd >> n;
-            vector<Record> v_e = read_records(is_cmd, n);
-            vector<Record> v_a = idf.to_vector();
+            auto v_e = read_records(is_cmd, n);
+            auto v_a = idf.to_vector();
             cout << "check: " << (v_e == v_a ? "ok" : "fail") << endl;
         } else if (cmd == "print") {
             cout << "print:" << endl;
-            idf.for_each([&](Record r) { cout << r << endl; });
+            dump_vec(idf2vec(idf));
+            cout << endl;
             cout << "dump:" << endl;
             idf.dump();
         } else {

@@ -19,15 +19,15 @@ public:
     IndexedFile() = delete;
     IndexedFile(string path);
 
-    void insert(Record r);
+    void insert(int k, Record r);
 
-    bool contains(Record r);
+    pair<bool, Record> find(int k);
 
-    void remove(Record r);
+    Record remove(int k);
 
-    void for_each(function<void(Record)> f);
+    void for_each(function<void(int, Record)> f);
 
-    vector<Record> to_vector();
+    vector<pair<int, Record>> to_vector();
 
     void dump();
 };

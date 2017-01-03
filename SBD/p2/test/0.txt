@@ -1,23 +1,23 @@
-insert 1 0 0 0 0 0
+insert 1 0 0 0 0 0 0
 print
-insert 2 0 0 0 0 0
+insert 2 0 0 0 0 0 0
 print
-insert 3 0 0 0 0 0
+insert 3 0 0 0 0 0 0
 print
-insert 4 0 0 0 0 0
+insert 4 0 0 0 0 0 0
 print
-insert 5 0 0 0 0 0
+insert 5 0 0 0 0 0 0
 print
-insert 6 0 0 0 0 0
+insert 6 0 0 0 0 0 0
 print
-insert 7 0 0 0 0 0
+insert 7 0 0 0 0 0 0
 print
 check 7
-	1 0 0 0 0 0
-	2 0 0 0 0 0
-	3 0 0 0 0 0
-	4 0 0 0 0 0
-	5 0 0 0 0 0
-	6 0 0 0 0 0
-	7 0 0 0 0 0
+	1 0 0 0 0 0 0
+	2 0 0 0 0 0 0
+	3 0 0 0 0 0 0
+	4 0 0 0 0 0 0
+	5 0 0 0 0 0 0
+	6 0 0 0 0 0 0
+	7 0 0 0 0 0 0
 print

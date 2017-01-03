@@ -4,38 +4,42 @@
 IndexedFile::IndexedFile(string path)
         : storage{path + "_index"}, index{storage}, content{path} {}
 
-void IndexedFile::insert(Record r) {
-    int x = (int) r.pkey();// FIXME: i64
-    // FIXME: user-selected key, not eq from p1
-    assert(index.find(x) == NOT_FOUND); // FIXME: assert
+void IndexedFile::insert(int k, Record r) {
+    assert(index.find(k) == NOT_FOUND);
     int a = content.write_record(r);
-    index.insert(x, a);
+    index.insert(k, a);
 }
 
-bool IndexedFile::contains(Record r) {
-    return index.find((int) r.pkey()) != NOT_FOUND;
+pair<bool, Record> IndexedFile::find(int k) {
+    int a = index.find(k);
+    if(a == NOT_FOUND) {
+        return make_pair(false, Record{});
+    } else {
+        Record r = content.read_record(a);
+        return make_pair(true, r);
+    }
 }
 
-
-void IndexedFile::remove(Record r) {
-    int x = (int) r.pkey();
-    int a = index.remove(x);
+Record IndexedFile::remove(int k) {
+    int a = index.remove(k);
     assert(a != NOT_FOUND);
+    Record r = content.read_record(a);
+    return r;
     // TODO: Release space in content file?
 }
 
-void IndexedFile::for_each(function<void(Record)> f) {
+void IndexedFile::for_each(function<void(int, Record)> f) {
     index.for_each([&](BElement e) {
+        int k = e.x;
         Record r = content.read_record(e.a);
-        assert(r.pkey() == e.x);
-        f(r);
+        f(k, r);
     });
 }
 
-vector<Record> IndexedFile::to_vector() {
-    vector<Record> v;
-    for_each([&](Record r) {
-        v.push_back(r);
+vector<pair<int, Record>> IndexedFile::to_vector() {
+    vector<pair<int, Record>> v;
+    for_each([&](int k, Record r) {
+        v.push_back({k, r});
     });
     return v;
 }

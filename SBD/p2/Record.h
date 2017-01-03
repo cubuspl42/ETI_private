@@ -23,18 +23,7 @@ struct Record {
 
     Record(int64_t a, int64_t b, int64_t c, int64_t d, int64_t e, int64_t f)
         : a0(a), a1(b), a2(c), a3(d), a4(e), x(f) {}
-
-    int64_t pkey();
 };
-
-inline int64_t g(Record r) {
-    return
-            r.a0 +
-            r.a1 * r.x +
-            r.a2 * r.x * r.x +
-            r.a3 * r.x * r.x * r.x +
-            r.a4 * r.x * r.x * r.x * r.x;
-}
 
 inline bool operator==(Record a, Record b) {
     auto t1 = make_tuple(a.a0, a.a1, a.a2, a.a3, a.a4, a.x);
@@ -43,9 +32,9 @@ inline bool operator==(Record a, Record b) {
 }
 
 inline bool operator<(Record a, Record b) {
-    int64_t y1 = g(a);
-    int64_t y2 = g(b);
-    return y1 < y2;
+    auto t1 = make_tuple(a.a0, a.a1, a.a2, a.a3, a.a4, a.x);
+    auto t2 = make_tuple(b.a0, b.a1, b.a2, b.a3, b.a4, b.x);
+    return t1 < t2;
 }
 
 inline istream &operator>>(istream &is, Record &r) {
@@ -55,7 +44,7 @@ inline istream &operator>>(istream &is, Record &r) {
 inline ostream &operator<<(ostream &os, Record r) {
     return os << "("
               << r.a0 << "," << r.a1 << "," << r.a2 << "," << r.a3 << "," << r.a4 << "," << r.x
-              << "); g(r) = " << g(r);
+              << ")";
 }
 
 #endif //P2_RECORD_H
