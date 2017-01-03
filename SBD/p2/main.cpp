@@ -47,6 +47,47 @@ vector<Record> read_records(istream &is, int n) {
     return v;
 }
 
+static vector<Record> set2vec(const set<Record> &s) {
+    vector<Record> v;
+    std::copy(s.begin(), s.end(), std::back_inserter(v));
+    return v;
+}
+
+static vector<Record> idf2vec(IndexedFile &idf) {
+    vector<Record> v;
+    idf.for_each([&](Record r) {
+        v.push_back(r);
+    });
+    return v;
+}
+
+static void dump_vec(const vector<Record> &v) {
+    cout << "[ ";
+    for(Record r : v) {
+        cout << r << " ";
+    }
+    cout << "]";
+}
+
+static void check(const set<Record> &s, IndexedFile &idf) {
+    auto sv = set2vec(s);
+    auto btv = idf2vec(idf);
+    if(sv != btv) {
+        cout << "sv: ";
+        dump_vec(sv);
+        cout << endl << endl;
+
+        cout << "idf:" << endl;
+        idf.dump();
+        cout << endl;
+
+        cout << "btv: ";
+        dump_vec(btv);
+        cout << endl << endl;
+    }
+    assert(sv == btv);
+}
+
 void exec_commands(IndexedFile &idf, istream &is_cmd) {
     set<Record> s;
     while (is_cmd.good()) {
@@ -60,6 +101,15 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
             cout << "INSERT " << r << endl;
             idf.insert(r);
             s.insert(r);
+            check(s, idf);
+        } else if (cmd == "remove") {
+            Record r;
+            is_cmd >> r;
+            assert(!is_cmd.fail());
+            cout << "REMOVE " << r << endl;
+            idf.remove(r);
+            s.erase(r);
+            check(s, idf);
         } else if (cmd == "find") {
             Record r;
             is_cmd >> r;
@@ -67,6 +117,7 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
             cout << "FIND " << r << endl;
             bool b = idf.contains(r);
             cout << b << endl;
+            check(s, idf);
         } else if (cmd == "check") {
             int n;
             is_cmd >> n;

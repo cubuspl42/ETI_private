@@ -1,20 +1,12 @@
 insert 10 0 0 0 0 0
-print
 insert 20 0 0 0 0 0
-print
 insert 30 0 0 0 0 0
 insert 40 0 0 0 0 0
-print
 insert 11 0 0 0 0 0
-print
 insert 12 0 0 0 0 0
-print
 insert 13 0 0 0 0 0
-print
 insert 14 0 0 0 0 0
-print
 insert 21 0 0 0 0 0
-print
 insert 22 0 0 0 0 0
 insert 23 0 0 0 0 0
 insert 24 0 0 0 0 0

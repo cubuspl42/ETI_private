@@ -40,8 +40,17 @@ BFindResult BTree::_find(BTreeStorage &stg, vector<BNode> &mem, int lv, int p, i
 }
 
 BFindResult BTree::_find_max(BTreeStorage &stg, vector<BNode> &mem, int lv, int p) {
-    assert(false); // TODO: implement
-    return BFindResult{0, {}, 0, 0};
+    BNode &nd = mem[lv];
+    stg.read_page(nd, p);
+
+    if(nd.is_leaf()) {
+        int ei = nd.m;
+        BElement mxe = nd.e(ei);
+        return BFindResult{nd.idx, mxe, lv, ei};
+    } else {
+        int mxp = nd.p(nd.m);
+        return _find_max(stg, mem, lv + 1, mxp);
+    }
 }
 
 int BTree::find(int x) {
@@ -135,11 +144,11 @@ void BTree::_fix_underflow(BTreeStorage &stg, std::vector<BNode> &mem, int lv) {
                 _merge(nd, exnd, pnd, ei);
             }
 
-            if(lv == 1 && pnd.m == 0) {
-                _shrink(pnd);
-            }
-
             _fix_underflow(stg, mem, lv - 1);
+        }
+    } else {
+        if(nd.m == 0) {
+            _shrink(nd);
         }
     }
 
@@ -190,7 +199,7 @@ static BNode &max_leaf(PagedFile &pgf, int p) {
 
 #endif
 
-void BTree::remove(int x) {
+int BTree::remove(int x) {
     _resize_mem();
     auto fr = _find(_stg, _mem, 0, hdr.s, x);
     assert(fr.e.a != NOT_FOUND);
@@ -203,13 +212,16 @@ void BTree::remove(int x) {
         assert(frm.lv == hdr.h - 1);
 
         nd.set_e(fr.c, frm.e);
+        _stg.write_page(nd);
 
         BNode &mnd = _mem[hdr.h - 1];
         mnd.remove(frm.c);
         _fix_underflow(_stg, _mem, frm.lv);
+        return frm.e.a;
     } else {
         nd.remove(fr.c);
         _fix_underflow(_stg, _mem, fr.lv);
+        return fr.e.a;
     }
 }
 
@@ -378,7 +390,6 @@ void BTree::_for_each(int p, vector<BNode> &mem, int lv, function<void(BElement)
 
     BNode &nd = mem[lv];
     _stg.read_page(nd, p);
-    assert(nd.m > 0);
 
     int p0 = nd.p(0);
     _for_each(p0, mem, lv + 1, f);
@@ -436,7 +447,6 @@ BTree::BTree(BTreeStorage &stg) : _stg{stg} {
 void BTree::_shrink(BNode &rnd) {
     assert(rnd.m == 0);
     int p0 = rnd.p(0);
-    assert(p0 != NIL);
 
     rnd.data.front() = Ep{BElement{}, NIL};
 

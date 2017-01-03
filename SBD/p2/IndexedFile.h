@@ -23,6 +23,8 @@ public:
 
     bool contains(Record r);
 
+    void remove(Record r);
+
     void for_each(function<void(Record)> f);
 
     vector<Record> to_vector();

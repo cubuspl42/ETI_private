@@ -48,6 +48,10 @@ class BTree {
 
     void _fix_underflow(BTreeStorage &stg, std::vector<BNode> &mem, int lv);
 
+    void _shrink(BNode &rnd);
+
+    void _resize_mem();
+
 public:
     BTree(BTreeStorage &stg);
 
@@ -68,19 +72,15 @@ public:
     /**
      * Remove element
      * @param x key
+     * @return value or NOT_FOUND
      */
-    void remove(int x);
+    int remove(int x);
 
     void for_each(function<void(BElement)> f);
 
     void _dump(int p, int i);
 
     void dump();
-
-//    void _merge(BNode &lp, BNode &rp, BPageBuf &ppgb, int i);
-    void _shrink(BNode &rnd);
-
-    void _resize_mem();
 };
 
 #endif //P2_INDEXFILE_H

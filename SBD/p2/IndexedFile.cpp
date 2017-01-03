@@ -16,15 +16,20 @@ bool IndexedFile::contains(Record r) {
     return index.find((int) r.pkey()) != NOT_FOUND;
 }
 
+
+void IndexedFile::remove(Record r) {
+    int x = (int) r.pkey();
+    int a = index.remove(x);
+    assert(a != NOT_FOUND);
+    // TODO: Release space in content file?
+}
+
 void IndexedFile::for_each(function<void(Record)> f) {
-    // TODO: implement
-#if 0
-    index.for_each([&](pair<int, int> xa) {
-        Record r = content.read_record(xa.second);
-        assert(r.pkey() == xa.first);
+    index.for_each([&](BElement e) {
+        Record r = content.read_record(e.a);
+        assert(r.pkey() == e.x);
         f(r);
     });
-#endif
 }
 
 vector<Record> IndexedFile::to_vector() {

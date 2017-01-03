@@ -293,6 +293,7 @@ struct BNode {
         assert(i > 0 && i <= m);
         data.erase(data.begin() + i);
         --m;
+        data.resize(NODE_DATA_MEMORY_SIZE);
     }
 
     void emerge(int ei, int p) {
@@ -300,6 +301,7 @@ struct BNode {
         data.erase(data.begin() + ei);
         data[ei - 1].p = p;
         --m;
+        data.resize(NODE_DATA_MEMORY_SIZE);
     }
 
     bool operator==(const BNode &o) const {

@@ -65,6 +65,19 @@ static bool check_ms(MemStorage ac, MemStorage ex) {
     return ac == ex;
 }
 
+static bool check_ms2(MemStorage ac, MemStorage ex, BTree &bt) {
+    if(ac != ex) {
+        cout << "**** bt" << endl;
+        bt.dump();
+        cout << ">>>> actual" << endl;
+        ac.dump();
+        cout << "----" << endl;
+        ex.dump();
+        cout << "<<<< expected" << endl;
+    }
+    return ac == ex;
+}
+
 static BNode node(
         int idx,
         int m,
@@ -83,6 +96,48 @@ static BNode node(
     d[3].e = e3, d[3].p = p3;
     d[4].e = e4, d[4].p = p4;
     return nd;
+}
+
+static void test_find_simple() {
+    MemStorage ms{
+            //s  h  n
+            {0, 2, 3},
+            {
+                    node(0, 1, 1, {10, 0}, 2),
+                    node(1, 3, NIL, {1, 0}, NIL, {2, 123}, NIL, {4, 0}, NIL),
+                    node(2, 3, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
+            }
+    };
+    BTree bt{ms};
+    int a = bt.find(2);
+    assert(a == 123);
+}
+
+
+static void test_find_not_found() {
+    MemStorage ms{
+            //s  h  n
+            {0, 2, 3},
+            {
+                    node(0, 1, 1, {10, 0}, 2),
+                    node(1, 3, NIL, {1, 0}, NIL, {2, 123}, NIL, {4, 0}, NIL),
+                    node(2, 3, NIL, {11, 0}, NIL, {12, 0}, NIL, {14, 0}, NIL),
+            }
+    };
+    BTree bt{ms};
+    int a = bt.find(13);
+    assert(a == NOT_FOUND);
+}
+
+static void test_find_empty_tree() {
+    MemStorage ms{
+            //s  h  n
+            {NIL, 0, 0},
+            {}
+    };
+    BTree bt{ms};
+    int a = bt.find(13);
+    assert(a == NOT_FOUND);
 }
 
 static void test_new_root() {
@@ -546,7 +601,6 @@ static void test_remove_merge_root() {
     assert(check_ms(ms, ms2));
 }
 
-
 static void test_remove_swap() {
     MemStorage ms{
             //s  h  n
@@ -568,10 +622,33 @@ static void test_remove_swap() {
     };
     BTree bt{ms};
     bt.remove(10);
-    assert(check_ms(ms, ms2));
+    assert(check_ms2(ms, ms2, bt));
+}
+
+static void test_remove_root() {
+    MemStorage ms{
+            //s  h  n
+            {0, 1, 1},
+            {
+                    node(0, 1, NIL, {10, 0}, NIL),
+            }
+    };
+    const MemStorage ms2{
+            //s  h  n
+            {NIL, 0, 1},
+            {
+                node(0, 0, NIL),
+            }
+    };
+    BTree bt{ms};
+    bt.remove(10);
+    assert(check_ms2(ms, ms2, bt));
 }
 
 int main(int argc, const char *argv[]) {
+    test_find_simple();
+    test_find_not_found();
+    test_find_empty_tree();
     test_new_root();
     test_insert_simple();
     test_insert2();
@@ -591,5 +668,6 @@ int main(int argc, const char *argv[]) {
     test_remove_merge();
     test_remove_merge_root();
     test_remove_swap();
+    test_remove_root();
     return 0;
 }
