@@ -17,6 +17,7 @@ void MemStorage::read_page(BNode &pg, int i) {
     assert(i >= 0);
     assert(i < (int) _nodes.size());
     pg = _nodes[i];
+    pg.idx = i;
 }
 
 void MemStorage::write_page(const BNode &pg) {

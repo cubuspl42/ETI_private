@@ -78,17 +78,48 @@ static bool check_ms2(MemStorage ac, MemStorage ex, BTree &bt) {
     return ac == ex;
 }
 
-static BNode node(
-        int idx,
-        int m,
-        int p0,
-        BElement e1 = BElement{}, int p1 = NIL,
-        BElement e2 = BElement{}, int p2 = NIL,
-        BElement e3 = BElement{}, int p3 = NIL,
-        BElement e4 = BElement{}, int p4 = NIL) {
+static BNode node0() {
     BNode nd;
-    nd.idx = idx;
-    nd.m = m;
+    nd.m = 0;
+    auto &d = nd.data;
+    d[0].p = NIL;
+    d[1].e = BElement{};
+    return nd;
+}
+
+static BNode node1(int p0, BElement e1, int p1) {
+    BNode nd;
+    nd.m = 1;
+    auto &d = nd.data;
+    d[0].p = p0;
+    d[1].e = e1, d[1].p = p1;
+    return nd;
+}
+
+static BNode node2(int p0, BElement e1, int p1, BElement e2, int p2) {
+    BNode nd;
+    nd.m = 2;
+    auto &d = nd.data;
+    d[0].p = p0;
+    d[1].e = e1, d[1].p = p1;
+    d[2].e = e2, d[2].p = p2;
+    return nd;
+}
+
+static BNode node3(int p0, BElement e1, int p1, BElement e2, int p2, BElement e3, int p3) {
+    BNode nd;
+    nd.m = 3;
+    auto &d = nd.data;
+    d[0].p = p0;
+    d[1].e = e1, d[1].p = p1;
+    d[2].e = e2, d[2].p = p2;
+    d[3].e = e3, d[3].p = p3;
+    return nd;
+}
+
+static BNode node4(int p0, BElement e1, int p1, BElement e2, int p2, BElement e3, int p3, BElement e4, int p4) {
+    BNode nd;
+    nd.m = 4;
     auto &d = nd.data;
     d[0].p = p0;
     d[1].e = e1, d[1].p = p1;
@@ -103,9 +134,9 @@ static void test_find_simple() {
             //s  h  n
             {0, 2, 3},
             {
-                    node(0, 1, 1, {10, 0}, 2),
-                    node(1, 3, NIL, {1, 0}, NIL, {2, 123}, NIL, {4, 0}, NIL),
-                    node(2, 3, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
+                    node1(1, {10, 0}, 2),
+                    node3(NIL, {1, 0}, NIL, {2, 123}, NIL, {4, 0}, NIL),
+                    node3(NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
             }
     };
     BTree bt{ms};
@@ -119,9 +150,9 @@ static void test_find_not_found() {
             //s  h  n
             {0, 2, 3},
             {
-                    node(0, 1, 1, {10, 0}, 2),
-                    node(1, 3, NIL, {1, 0}, NIL, {2, 123}, NIL, {4, 0}, NIL),
-                    node(2, 3, NIL, {11, 0}, NIL, {12, 0}, NIL, {14, 0}, NIL),
+                    node1(1, {10, 0}, 2),
+                    node3(NIL, {1, 0}, NIL, {2, 123}, NIL, {4, 0}, NIL),
+                    node3(NIL, {11, 0}, NIL, {12, 0}, NIL, {14, 0}, NIL),
             }
     };
     BTree bt{ms};
@@ -153,18 +184,18 @@ static void test_insert_simple() {
             //s  h  n
             {0, 2, 3},
             {
-                    node(0, 1, 1, {10, 0}, 2),
-                    node(1, 3, NIL, {1, 0}, NIL, {2, 0}, NIL, {4, 0}, NIL),
-                    node(2, 3, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
+                    node1(1, {10, 0}, 2),
+                    node3(NIL, {1, 0}, NIL, {2, 0}, NIL, {4, 0}, NIL),
+                    node3(NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
             }
     };
     const MemStorage ms2{
             //s  h  n
             {0, 2, 3},
             {
-                    node(0, 1, 1, {10, 0}, 2),
-                    node(1, 4, NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
-                    node(2, 3, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
+                    node1(1, {10, 0}, 2),
+                    node4(NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
+                    node3(NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
             }
     };
     BTree bt{ms};
@@ -177,14 +208,14 @@ static void test_insert2() {
             //s  h  n
             {0, 1, 1},
             {
-                    node(0, 1, NIL, {10, 0}, NIL),
+                    node1(NIL, {10, 0}, NIL),
             }
     };
     const MemStorage ms2{
             //s  h  n
             {0, 1, 1},
             {
-                    node(0, 3, NIL, {10, 0}, NIL, {20, 0}, NIL, {30, 0}, NIL),
+                    node3(NIL, {10, 0}, NIL, {20, 0}, NIL, {30, 0}, NIL),
             }
     };
     BTree bt{ms};
@@ -198,16 +229,16 @@ static void test_split_root() {
             //s  h  n
             {0, 1, 1},
             {
-                    node(0, 4, NIL, {1, 2}, NIL, {2, 3}, NIL, {3, 4}, NIL, {4, 5}, NIL),
+                    node4(NIL, {1, 2}, NIL, {2, 3}, NIL, {3, 4}, NIL, {4, 5}, NIL),
             }
     };
     const MemStorage ms2{
             //s  h  n
             {2, 2, 3},
             {
-                    node(0, 2, NIL, {1, 2}, NIL, {2, 3}, NIL),
-                    node(1, 2, NIL, {4, 5}, NIL, {5, 6}, NIL),
-                    node(2, 1, 0, {3, 4}, 1),
+                    node2(NIL, {1, 2}, NIL, {2, 3}, NIL),
+                    node2(NIL, {4, 5}, NIL, {5, 6}, NIL),
+                    node1(0, {3, 4}, 1),
             }
     };
     BTree bt{ms};
@@ -225,7 +256,7 @@ static void test_insert_full() {
             //s  h  n
             {0, 1, 1},
             {
-                    node(0, 4, NIL, {10, 0}, NIL, {20, 0}, NIL, {30, 0}, NIL, {40, 0}, NIL)
+                    node4(NIL, {10, 0}, NIL, {20, 0}, NIL, {30, 0}, NIL, {40, 0}, NIL)
             }
     };
     BTree bt{ms};
@@ -246,9 +277,9 @@ static void test_insert_stairs() {
             //s  h  n
             {2, 2, 3},
             {
-                    node(0, 2, NIL, {10, 0}, NIL, {11, 0}, NIL),
-                    node(1, 2, NIL, {30, 0}, NIL, {40, 0}, NIL),
-                    node(2, 1, 0, {20, 0}, 1),
+                    node2(NIL, {10, 0}, NIL, {11, 0}, NIL),
+                    node2(NIL, {30, 0}, NIL, {40, 0}, NIL),
+                    node1(0, {20, 0}, 1),
             }
     };
     BTree bt{ms};
@@ -270,9 +301,9 @@ static void test_insert_stairs2() {
             //s  h  n
             {2, 2, 3},
             {
-                    node(0, 4, NIL, {10, 0}, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
-                    node(1, 4, NIL, {20, 0}, NIL, {21, 0}, NIL, {30, 0}, NIL, {40, 0}, NIL),
-                    node(2, 1, 0, {14, 0}, 1),
+                    node4(NIL, {10, 0}, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
+                    node4(NIL, {20, 0}, NIL, {21, 0}, NIL, {30, 0}, NIL, {40, 0}, NIL),
+                    node1(0, {14, 0}, 1),
             }
     };
     BTree bt{ms};
@@ -298,10 +329,10 @@ static void test_insert_stairs3() {
             //s  h  n
             {2, 2, 4},
             {
-                    node(0, 4, NIL, {10, 0}, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
-                    node(1, 2, NIL, {20, 0}, NIL, {21, 0}, NIL),
-                    node(2, 2, 0, {14, 0}, 1, {22, 0}, 3),
-                    node(3, 2, NIL, {30, 0}, NIL, {40, 0}, NIL)
+                    node4(NIL, {10, 0}, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
+                    node2(NIL, {20, 0}, NIL, {21, 0}, NIL),
+                    node2(0, {14, 0}, 1, {22, 0}, 3),
+                    node2(NIL, {30, 0}, NIL, {40, 0}, NIL)
             }
     };
     BTree bt{ms};
@@ -328,10 +359,10 @@ static void test_insert_stairs4() {
             //s  h  n
             {2, 2, 4},
             {
-                    node(0, 4, NIL, {10, 0}, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
-                    node(1, 4, NIL, {20, 0}, NIL, {21, 0}, NIL, {22, 0}, NIL, {23, 0}, NIL ),
-                    node(2, 2, 0, {14, 0}, 1, {24, 0}, 3),
-                    node(3, 3, NIL, {30, 0}, NIL, {31, 0}, NIL, {40, 0}, NIL)
+                    node4(NIL, {10, 0}, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
+                    node4(NIL, {20, 0}, NIL, {21, 0}, NIL, {22, 0}, NIL, {23, 0}, NIL),
+                    node2(0, {14, 0}, 1, {24, 0}, 3),
+                    node3(NIL, {30, 0}, NIL, {31, 0}, NIL, {40, 0}, NIL)
             }
     };
     BTree bt{ms};
@@ -360,27 +391,27 @@ static void test_split_chained() {
             //s  h  n
             {0, 2, 6},
             {
-                    node(0, 4, 1, {10, 0}, 2, {20, 0}, 3, {30, 0}, 4, {40, 0}, 5),
-                    node(1, 4, NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
-                    node(2, 4, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL, {14, 0}, NIL),
-                    node(3, 4, NIL, {21, 0}, NIL, {22, 0}, NIL, {24, 0}, NIL, {25, 0}, NIL),
-                    node(4, 4, NIL, {31, 0}, NIL, {32, 0}, NIL, {33, 0}, NIL, {34, 0}, NIL),
-                    node(5, 4, NIL, {41, 0}, NIL, {42, 0}, NIL, {43, 0}, NIL, {44, 0}, NIL),
+                    node4(1, {10, 0}, 2, {20, 0}, 3, {30, 0}, 4, {40, 0}, 5),
+                    node4(NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
+                    node4(NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL, {14, 0}, NIL),
+                    node4(NIL, {21, 0}, NIL, {22, 0}, NIL, {24, 0}, NIL, {25, 0}, NIL),
+                    node4(NIL, {31, 0}, NIL, {32, 0}, NIL, {33, 0}, NIL, {34, 0}, NIL),
+                    node4(NIL, {41, 0}, NIL, {42, 0}, NIL, {43, 0}, NIL, {44, 0}, NIL),
             }
     };
     const MemStorage ms2{
             //s  h  n
             {8, 3, 9},
             {
-                    node(0, 2, 1, {10, 0}, 2, {20, 0}, 3),
-                    node(1, 4, NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
-                    node(2, 4, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL, {14, 0}, NIL),
-                    node(3, 2, NIL, {21, 0}, NIL, {22, 0}, NIL),
-                    node(4, 4, NIL, {31, 0}, NIL, {32, 0}, NIL, {33, 0}, NIL, {34, 0}, NIL),
-                    node(5, 4, NIL, {41, 0}, NIL, {42, 0}, NIL, {43, 0}, NIL, {44, 0}, NIL),
-                    node(6, 2, NIL, {24, 0}, NIL, {25, 0}, NIL),
-                    node(7, 2, 6, {30, 0}, 4, {40, 0}, 5),
-                    node(8, 1, 0, {23, 0}, 7),
+                    node2(1, {10, 0}, 2, {20, 0}, 3),
+                    node4(NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
+                    node4(NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL, {14, 0}, NIL),
+                    node2(NIL, {21, 0}, NIL, {22, 0}, NIL),
+                    node4(NIL, {31, 0}, NIL, {32, 0}, NIL, {33, 0}, NIL, {34, 0}, NIL),
+                    node4(NIL, {41, 0}, NIL, {42, 0}, NIL, {43, 0}, NIL, {44, 0}, NIL),
+                    node2(NIL, {24, 0}, NIL, {25, 0}, NIL),
+                    node2(6, {30, 0}, 4, {40, 0}, 5),
+                    node1(0, {23, 0}, 7),
             }
     };
     BTree bt{ms};
@@ -393,18 +424,18 @@ static void test_compensate_even() {
             //s  h  n
             {0, 2, 3},
             {
-                    node(0, 1, 1, {10, 0}, 2),
-                    node(1, 4, NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
-                    node(2, 2, NIL, {11, 0}, NIL, {12, 0}, NIL),
+                    node1(1, {10, 0}, 2),
+                    node4(NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
+                    node2(NIL, {11, 0}, NIL, {12, 0}, NIL),
             }
     };
     const MemStorage ms2{
             //s  h  n
             {0, 2, 3},
             {
-                    node(0, 1, 1, {5, 0}, 2),
-                    node(1, 4, NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
-                    node(2, 3, NIL, {10, 0}, NIL, {11, 0}, NIL, {12, 0}, NIL),
+                    node1(1, {5, 0}, 2),
+                    node4(NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
+                    node3(NIL, {10, 0}, NIL, {11, 0}, NIL, {12, 0}, NIL),
             }
     };
     BTree bt{ms};
@@ -417,18 +448,18 @@ static void test_compensate_odd() {
             //s  h  n
             {0, 2, 3},
             {
-                    node(0, 1, 1, {10, 0}, 2),
-                    node(1, 4, NIL, {1, 0}, NIL, {2, 0}, NIL, {4, 0}, NIL, {5, 0}, NIL),
-                    node(2, 3, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
+                    node1(1, {10, 0}, 2),
+                    node4(NIL, {1, 0}, NIL, {2, 0}, NIL, {4, 0}, NIL, {5, 0}, NIL),
+                    node3(NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
             }
     };
     const MemStorage ms2{
             //s  h  n
             {0, 2, 3},
             {
-                    node(0, 1, 1, {5, 0}, 2),
-                    node(1, 4, NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
-                    node(2, 4, NIL, {10, 0}, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
+                    node1(1, {5, 0}, 2),
+                    node4(NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
+                    node4(NIL, {10, 0}, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
             }
     };
     BTree bt{ms};
@@ -441,35 +472,35 @@ static void test_compensate_inner_node() {
             //s  h  n
             {0, 3, 11},
             {
-                    node(0, 1, 1, {100, 0}, 2),
-                    node(1, 4, 3, {10, 0}, 4, {20, 0}, 5, {30, 0}, 6, {40, 0}, 7),
-                    node(2, 2, 8, {210, 0}, 9, {220, 0}, 10),
-                    node(3, 4, NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
-                    node(4, 4, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL, {14, 0}, NIL),
-                    node(5, 4, NIL, {21, 0}, NIL, {22, 0}, NIL, {23, 0}, NIL, {24, 0}, NIL),
-                    node(6, 4, NIL, {31, 0}, NIL, {32, 0}, NIL, {33, 0}, NIL, {34, 0}, NIL),
-                    node(7, 4, NIL, {41, 0}, NIL, {42, 0}, NIL, {43, 0}, NIL, {44, 0}, NIL),
-                    node(8, 4, NIL, {201, 0}, NIL, {202, 0}, NIL, {203, 0}, NIL, {204, 0}, NIL),
-                    node(9, 4, NIL, {211, 0}, NIL, {212, 0}, NIL, {213, 0}, NIL, {214, 0}, NIL),
-                    node(10, 4, NIL, {221, 0}, NIL, {222, 0}, NIL, {223, 0}, NIL, {224, 0}, NIL),
+                    node1(1, {100, 0}, 2),
+                    node4(3, {10, 0}, 4, {20, 0}, 5, {30, 0}, 6, {40, 0}, 7),
+                    node2(8, {210, 0}, 9, {220, 0}, 10),
+                    node4(NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
+                    node4(NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL, {14, 0}, NIL),
+                    node4(NIL, {21, 0}, NIL, {22, 0}, NIL, {23, 0}, NIL, {24, 0}, NIL),
+                    node4(NIL, {31, 0}, NIL, {32, 0}, NIL, {33, 0}, NIL, {34, 0}, NIL),
+                    node4(NIL, {41, 0}, NIL, {42, 0}, NIL, {43, 0}, NIL, {44, 0}, NIL),
+                    node4(NIL, {201, 0}, NIL, {202, 0}, NIL, {203, 0}, NIL, {204, 0}, NIL),
+                    node4(NIL, {211, 0}, NIL, {212, 0}, NIL, {213, 0}, NIL, {214, 0}, NIL),
+                    node4(NIL, {221, 0}, NIL, {222, 0}, NIL, {223, 0}, NIL, {224, 0}, NIL),
             }
     };
     const MemStorage ms2{
             //s  h  n
             {0, 3, 12},
             {
-                    node(0, 1, 1, {40, 0}, 2),
-                    node(1, 4, 3, {10, 0}, 4, {20, 0}, 5, {23, 0}, 11, {30, 0}, 6),
-                    node(2, 3, 7, {100, 0}, 8, {210, 0}, 9, {220, 0}, 10),
-                    node(3, 4, NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
-                    node(4, 4, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL, {14, 0}, NIL),
-                    node(5, 2, NIL, {21, 0}, NIL, {22, 0}, NIL),
-                    node(6, 4, NIL, {31, 0}, NIL, {32, 0}, NIL, {33, 0}, NIL, {34, 0}, NIL),
-                    node(7, 4, NIL, {41, 0}, NIL, {42, 0}, NIL, {43, 0}, NIL, {44, 0}, NIL),
-                    node(8, 4, NIL, {201, 0}, NIL, {202, 0}, NIL, {203, 0}, NIL, {204, 0}, NIL),
-                    node(9, 4, NIL, {211, 0}, NIL, {212, 0}, NIL, {213, 0}, NIL, {214, 0}, NIL),
-                    node(10, 4, NIL, {221, 0}, NIL, {222, 0}, NIL, {223, 0}, NIL, {224, 0}, NIL),
-                    node(11, 2, NIL, {24, 0}, NIL, {25, 0}, NIL),
+                    node1(1, {40, 0}, 2),
+                    node4(3, {10, 0}, 4, {20, 0}, 5, {23, 0}, 11, {30, 0}, 6),
+                    node3(7, {100, 0}, 8, {210, 0}, 9, {220, 0}, 10),
+                    node4(NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
+                    node4(NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL, {14, 0}, NIL),
+                    node2(NIL, {21, 0}, NIL, {22, 0}, NIL),
+                    node4(NIL, {31, 0}, NIL, {32, 0}, NIL, {33, 0}, NIL, {34, 0}, NIL),
+                    node4(NIL, {41, 0}, NIL, {42, 0}, NIL, {43, 0}, NIL, {44, 0}, NIL),
+                    node4(NIL, {201, 0}, NIL, {202, 0}, NIL, {203, 0}, NIL, {204, 0}, NIL),
+                    node4(NIL, {211, 0}, NIL, {212, 0}, NIL, {213, 0}, NIL, {214, 0}, NIL),
+                    node4(NIL, {221, 0}, NIL, {222, 0}, NIL, {223, 0}, NIL, {224, 0}, NIL),
+                    node2(NIL, {24, 0}, NIL, {25, 0}, NIL),
             }
     };
     BTree bt{ms};
@@ -482,18 +513,18 @@ static void test_compensate_left() {
             //s  h  n
             {0, 2, 3},
             {
-                    node(0, 1, 1, {10, 0}, 2),
-                    node(1, 3, NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL),
-                    node(2, 4, NIL, {11, 0}, NIL, {12, 0}, NIL, {14, 0}, NIL, {15, 0}, NIL),
+                    node1(1, {10, 0}, 2),
+                    node3(NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL),
+                    node4(NIL, {11, 0}, NIL, {12, 0}, NIL, {14, 0}, NIL, {15, 0}, NIL),
             }
     };
     const MemStorage ms2{
             //s  h  n
             {0, 2, 3},
             {
-                    node(0, 1, 1, {11, 0}, 2),
-                    node(1, 4, NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {10, 0}, NIL),
-                    node(2, 4, NIL, {12, 0}, NIL, {13, 0}, NIL, {14, 0}, NIL, {15, 0}, NIL),
+                    node1(1, {11, 0}, 2),
+                    node4(NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {10, 0}, NIL),
+                    node4(NIL, {12, 0}, NIL, {13, 0}, NIL, {14, 0}, NIL, {15, 0}, NIL),
             }
     };
     BTree bt{ms};
@@ -506,18 +537,18 @@ static void test_remove_compensate_left() {
             //s  h  n
             {0, 2, 3},
             {
-                    node(0, 1, 1, {10, 0}, 2),
-                    node(1, 3, NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL),
-                    node(2, 2, NIL, {11, 0}, NIL, {12, 0}, NIL),
+                    node1(1, {10, 0}, 2),
+                    node3(NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL),
+                    node2(NIL, {11, 0}, NIL, {12, 0}, NIL),
             }
     };
     const MemStorage ms2{
             //s  h  n
             {0, 2, 3},
             {
-                    node(0, 1, 1, {3, 0}, 2),
-                    node(1, 2, NIL, {1, 0}, NIL, {2, 0}, NIL),
-                    node(2, 2, NIL, {10, 0}, NIL, {11, 0}, NIL),
+                    node1(1, {3, 0}, 2),
+                    node2(NIL, {1, 0}, NIL, {2, 0}, NIL),
+                    node2(NIL, {10, 0}, NIL, {11, 0}, NIL),
             }
     };
     BTree bt{ms};
@@ -530,18 +561,18 @@ static void test_remove_compensate_right() {
             //s  h  n
             {0, 2, 3},
             {
-                    node(0, 1, 1, {10, 0}, 2),
-                    node(1, 2, NIL, {1, 0}, NIL, {2, 0}, NIL),
-                    node(2, 3, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
+                    node1(1, {10, 0}, 2),
+                    node2(NIL, {1, 0}, NIL, {2, 0}, NIL),
+                    node3(NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
             }
     };
     const MemStorage ms2{
             //s  h  n
             {0, 2, 3},
             {
-                    node(0, 1, 1, {11, 0}, 2),
-                    node(1, 2, NIL, {1, 0}, NIL, {10, 0}, NIL),
-                    node(2, 2, NIL, {12, 0}, NIL, {13, 0}, NIL),
+                    node1(1, {11, 0}, 2),
+                    node2(NIL, {1, 0}, NIL, {10, 0}, NIL),
+                    node2(NIL, {12, 0}, NIL, {13, 0}, NIL),
             }
     };
     BTree bt{ms};
@@ -554,22 +585,22 @@ static void test_remove_merge() {
             //s  h  n
             {0, 2, 5},
             {
-                    node(0, 3, 1, {10, 0}, 2, {20, 0}, 3, {30, 0}, 4),
-                    node(1, 2, NIL, {1, 0}, NIL, {2, 0}, NIL),
-                    node(2, 2, NIL, {11, 0}, NIL, {12, 0}, NIL),
-                    node(3, 2, NIL, {21, 0}, NIL, {22, 0}, NIL),
-                    node(4, 2, NIL, {31, 0}, NIL, {32, 0}, NIL),
+                    node3(1, {10, 0}, 2, {20, 0}, 3, {30, 0}, 4),
+                    node2(NIL, {1, 0}, NIL, {2, 0}, NIL),
+                    node2(NIL, {11, 0}, NIL, {12, 0}, NIL),
+                    node2(NIL, {21, 0}, NIL, {22, 0}, NIL),
+                    node2(NIL, {31, 0}, NIL, {32, 0}, NIL),
             }
     };
     const MemStorage ms2{
             //s  h  n
             {0, 2, 5},
             {
-                    node(0, 2, 1, {20, 0}, 3, {30, 0}, 4),
-                    node(1, 4, NIL, {1, 0}, NIL, {2, 0}, NIL, {10, 0}, NIL, {11, 0}, NIL),
-                    node(2, 0, NIL),
-                    node(3, 2, NIL, {21, 0}, NIL, {22, 0}, NIL),
-                    node(4, 2, NIL, {31, 0}, NIL, {32, 0}, NIL),
+                    node2(1, {20, 0}, 3, {30, 0}, 4),
+                    node4(NIL, {1, 0}, NIL, {2, 0}, NIL, {10, 0}, NIL, {11, 0}, NIL),
+                    node0(),
+                    node2(NIL, {21, 0}, NIL, {22, 0}, NIL),
+                    node2(NIL, {31, 0}, NIL, {32, 0}, NIL),
             }
     };
     BTree bt{ms};
@@ -582,18 +613,18 @@ static void test_remove_merge_root() {
             //s  h  n
             {0, 2, 3},
             {
-                    node(0, 1, 1, {10, 0}, 2),
-                    node(1, 2, NIL, {1, 0}, NIL, {2, 0}, NIL),
-                    node(2, 2, NIL, {11, 0}, NIL, {12, 0}, NIL),
+                    node1(1, {10, 0}, 2),
+                    node2(NIL, {1, 0}, NIL, {2, 0}, NIL),
+                    node2(NIL, {11, 0}, NIL, {12, 0}, NIL),
             }
     };
     const MemStorage ms2{
             //s  h  n
             {1, 1, 3},
             {
-                    node(0, 0, NIL),
-                    node(1, 4, NIL, {1, 0}, NIL, {10, 0}, NIL, {11, 0}, NIL, {12, 0}, NIL),
-                    node(2, 0, NIL),
+                    node0(),
+                    node4(NIL, {1, 0}, NIL, {10, 0}, NIL, {11, 0}, NIL, {12, 0}, NIL),
+                    node0(),
             }
     };
     BTree bt{ms};
@@ -606,18 +637,18 @@ static void test_remove_swap() {
             //s  h  n
             {0, 2, 3},
             {
-                    node(0, 1, 1, {10, 0}, 2),
-                    node(1, 4, NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
-                    node(2, 4, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL, {14, 0}, NIL),
+                    node1(1, {10, 0}, 2),
+                    node4(NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
+                    node4(NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL, {14, 0}, NIL),
             }
     };
     const MemStorage ms2{
             //s  h  n
             {0, 2, 3},
             {
-                    node(0, 1, 1, {4, 0}, 2),
-                    node(1, 3, NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL),
-                    node(2, 4, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL, {14, 0}, NIL),
+                    node1(1, {4, 0}, 2),
+                    node3(NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL),
+                    node4(NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL, {14, 0}, NIL),
             }
     };
     BTree bt{ms};
@@ -630,14 +661,14 @@ static void test_remove_root() {
             //s  h  n
             {0, 1, 1},
             {
-                    node(0, 1, NIL, {10, 0}, NIL),
+                    node1(NIL, {10, 0}, NIL),
             }
     };
     const MemStorage ms2{
             //s  h  n
             {NIL, 0, 1},
             {
-                node(0, 0, NIL),
+                    node0(),
             }
     };
     BTree bt{ms};
@@ -650,18 +681,18 @@ static void test_update_simple() {
             //s  h  n
             {0, 2, 3},
             {
-                    node(0, 1, 1, {10, 0}, 2),
-                    node(1, 4, NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
-                    node(2, 4, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 123}, NIL, {14, 0}, NIL),
+                    node1(1, {10, 0}, 2),
+                    node4(NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
+                    node4(NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 123}, NIL, {14, 0}, NIL),
             }
     };
     const MemStorage ms2{
             //s  h  n
             {0, 2, 3},
             {
-                    node(0, 1, 1, {10, 0}, 2),
-                    node(1, 4, NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
-                    node(2, 4, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 124}, NIL, {14, 0}, NIL),
+                    node1(1, {10, 0}, 2),
+                    node4(NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
+                    node4(NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 124}, NIL, {14, 0}, NIL),
             }
     };
     BTree bt{ms};
