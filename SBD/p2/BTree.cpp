@@ -69,9 +69,9 @@ void BTree::_fix_overflow(BTreeStorage &stg, vector<BNode> &mem, int lv) {
         assert(nd.m == 2 * D + 1);
         BNode &exnd = mem.back(); // extra node
 
-        if (lv > 0) {
+        if (lv > 0) { // TODO: change if's order?
             BNode &pnd = mem[lv - 1];
-            if (_compensate(stg, nd, pnd, exnd) == COMPENSATE_OK) {
+            if (_compensate(stg, nd, pnd, exnd) == COMPENSATE_OK) { // TODO: exnd inside compensate?
                 stg.write_page(nd);
                 stg.write_page(pnd);
                 stg.write_page(exnd);
@@ -79,12 +79,12 @@ void BTree::_fix_overflow(BTreeStorage &stg, vector<BNode> &mem, int lv) {
             }
         }
 
-        int nnd_idx = hdr.n++;
+        int nnd_idx = hdr.n++; // TODO: -> allocate node
         exnd.idx = nnd_idx;
 
         BElement me = _split(nd, exnd);
 
-        _stg.write_page(nd);
+        _stg.write_page(nd); // TODO: Minimize page writes?
         _stg.write_page(exnd);
         _stg.write_header(hdr); // TODO: When to write header?
 
@@ -136,12 +136,14 @@ void BTree::_fix_underflow(BTreeStorage &stg, std::vector<BNode> &mem, int lv) {
                 int ei = pi;
                 stg.read_page(exnd, pl);
                 _merge(exnd, nd, pnd, ei);
+                // TODO: write exnd here?
             } else {
                 assert(pi < pnd.m);
                 int pr = pnd.p(pi + 1);
                 int ei = pi + 1;
                 stg.read_page(exnd, pr);
                 _merge(nd, exnd, pnd, ei);
+                // TODO: write exnd here?
             }
 
             _fix_underflow(stg, mem, lv - 1);

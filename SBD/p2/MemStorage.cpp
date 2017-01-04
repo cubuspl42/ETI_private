@@ -35,4 +35,3 @@ bool MemStorage::operator==(const MemStorage &o) {
 bool MemStorage::operator!=(const MemStorage &o) {
     return !(*this == o);
 }
-

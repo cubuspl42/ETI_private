@@ -27,7 +27,6 @@ public:
     bool operator==(const MemStorage &o);
 
     bool operator!=(const MemStorage &o);
-
 };
 
 
