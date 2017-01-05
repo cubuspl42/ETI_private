@@ -194,20 +194,15 @@ IndexedFile load_indexed_file(bool tmp) {
 static void experiment(IndexedFile &idf) {
     cout << "D = " << D << endl;
 
+    Metrics m;
+
     int N = 16000;
-    int nr = 1000;
     for(int i = 1; i <= N; ++i) {
         Record r{0, 0, 0, 0, 0, i};
-        idf.insert(i, r, nullptr);
-    }
-
-    Metrics m;
-    for(int i = 0; i < nr; ++i) {
-        idf.find(rand() % N, &m);
+        idf.insert(i, r, &m);
     }
 
     m.dump();
-    cout << m.page_reads / (double) nr << "/" << m.page_writes / (double) nr << endl;
 }
 
 /**
