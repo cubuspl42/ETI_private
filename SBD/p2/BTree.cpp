@@ -16,7 +16,7 @@ BNode &BTree::_extra_buf() {
 void BTree::_allocate_node(BNode &nd, Metrics *m) {
     int f = hdr.f;
     if(f > -1) {
-        _stg.read_page(nd, f, m);
+        _stg.read_page(nd, f, m, "_allocate_node");
         hdr.f = nd.idx;
         nd.idx = f;
         nd.m = 0;
@@ -31,12 +31,12 @@ void BTree::_free_node(BNode &nd, Metrics *m) {
     nd.idx = hdr.f;
     nd.m = 0;
     hdr.f = i;
-    _stg.write_page(nd, i, m); // TODO: Minimize page writes?
+    _stg.write_page(nd, i, m, "_free_node"); // TODO: Minimize page writes?
 }
 
 BFindResult BTree::_find(int lv, int p, int x, Metrics *m) {
     BNode &nd = _mem[lv];
-    _stg.read_page(nd, p, m);
+    _stg.read_page(nd, p, m, "_find");
 
     auto nfr = nd.find(x);
     if (nfr.e.a != NOT_FOUND) {
@@ -67,7 +67,7 @@ BFindResult BTree::_find(int lv, int p, int x, Metrics *m) {
 
 BFindResult BTree::_find_max(int lv, int p, Metrics *m) {
     BNode &nd = _mem[lv];
-    _stg.read_page(nd, p, m);
+    _stg.read_page(nd, p, m, "_find_max");
 
     if(nd.is_leaf()) {
         int ei = nd.m;
@@ -99,9 +99,9 @@ void BTree::_fix_overflow(int lv, Metrics *m) {
         if (lv > 0) { // TODO: change if's order?
             BNode &pnd = _mem[lv - 1];
             if (_compensate(nd, pnd, m) == COMPENSATE_OK) {
-                _stg.write_page(nd, m);
-                _stg.write_page(pnd, m);
-                _stg.write_page(exnd, m);
+                _stg.write_page(nd, m, "_fix_overflow (post-compensate; nd)");
+                _stg.write_page(pnd, m, "_fix_overflow (post-compensate; pnd)");
+                _stg.write_page(exnd, m, "_fix_overflow (post-compensate; exnd)");
                 return;
             }
         }
@@ -112,7 +112,7 @@ void BTree::_fix_overflow(int lv, Metrics *m) {
         BElement me = _split(nd, exnd);
 
 //        _stg.write_page(nd, m); // TODO: Minimize page writes?
-        _stg.write_page(exnd, m);
+        _stg.write_page(exnd, m, "_fix_overflow (post-split)");
         _stg.write_header(hdr, m); // TODO: When to write header?
 
         if (lv == 0) {
@@ -127,7 +127,7 @@ void BTree::_fix_overflow(int lv, Metrics *m) {
     }
 
     assert(!nd.overflows());
-    _stg.write_page(nd, m);
+    _stg.write_page(nd, m, "_fix_overflow (nd)");
 }
 
 void BTree::_fix_underflow(int lv, Metrics *m) {
@@ -141,9 +141,9 @@ void BTree::_fix_underflow(int lv, Metrics *m) {
 
             BNode &pnd = _mem[lv - 1];
             if (_compensate(nd, pnd, m) == COMPENSATE_OK) {
-                _stg.write_page(nd, m);
-                _stg.write_page(pnd, m);
-                _stg.write_page(exnd, m);
+                _stg.write_page(nd, m, "_fix_underflow (post-compensate; nd)");
+                _stg.write_page(pnd, m, "_fix_underflow (post-compensate; pnd)");
+                _stg.write_page(exnd, m, "_fix_underflow (post-compensate; exnd)");
                 return;
             }
 
@@ -154,14 +154,14 @@ void BTree::_fix_underflow(int lv, Metrics *m) {
                 assert(pi > 0);
                 int pl = pnd.p(pi - 1);
                 int ei = pi;
-                _stg.read_page(exnd, pl, m);
+                _stg.read_page(exnd, pl, m, "_fix_underflow (pre-merge; pi > 0)");
                 _merge(exnd, nd, pnd, ei, m);
                 // TODO: write exnd here?
             } else {
                 assert(pi < pnd.m);
                 int pr = pnd.p(pi + 1);
                 int ei = pi + 1;
-                _stg.read_page(exnd, pr, m);
+                _stg.read_page(exnd, pr, m, "_fix_underflow (pre-merge; pi = 0)");
                 _merge(nd, exnd, pnd, ei, m);
                 // TODO: write exnd here?
             }
@@ -175,7 +175,7 @@ void BTree::_fix_underflow(int lv, Metrics *m) {
     }
 
     if(nd.m > 0) {
-        _stg.write_page(nd, m);
+        _stg.write_page(nd, m, "_fix_underflow (nd)");
     }
 }
 
@@ -213,7 +213,7 @@ int BTree::remove(int x, Metrics *m) {
         assert(frm.lv == hdr.h - 1);
 
         nd.set_e(fr.c, frm.e);
-        _stg.write_page(nd, m);
+        _stg.write_page(nd, m, "remove (post-set_e)");
 
         BNode &mnd = _mem[hdr.h - 1];
         mnd.remove(frm.c);
@@ -232,7 +232,7 @@ int BTree::update(int x, int na, Metrics *m) {
     assert(fr.e.a != NOT_FOUND);
     BNode &nd = _mem[fr.lv];
     nd.set_e(fr.c, BElement{x, na});
-    _stg.write_page(nd, m);
+    _stg.write_page(nd, m, "update");
     return fr.e.a;
 }
 
@@ -308,7 +308,7 @@ CompensateStatus BTree::_compensate(BNode &nd, BNode &pnd, Metrics *m) {
     if (c > 0) {
         /* Try left sibling */
         int ls = pnd.p(c - 1);
-        _stg.read_page(snd, ls, m);
+        _stg.read_page(snd, ls, m, "_compensate (left)");
         if (can_compensate(snd, nd)) {
             distribute(snd, nd, pnd, c);
             return COMPENSATE_OK;
@@ -318,7 +318,7 @@ CompensateStatus BTree::_compensate(BNode &nd, BNode &pnd, Metrics *m) {
     if (c < pnd.m) {
         /* Try right sibling */
         int rs = pnd.p(c + 1);
-        _stg.read_page(snd, rs, m);
+        _stg.read_page(snd, rs, m, "_compensate (right)");
         if (can_compensate(snd, nd)) {
             distribute(nd, snd, pnd, c + 1);
             return COMPENSATE_OK;
@@ -354,7 +354,7 @@ void BTree::_merge(BNode &lp, BNode &rp, BNode &pnd, int ei, Metrics *m) {
 
     pnd.emerge(ei, lp.idx);
 
-    _stg.write_page(lp, m); // TODO: Minimize page writes?
+    _stg.write_page(lp, m, "_merge (lp)"); // TODO: Minimize page writes?
 
     _free_node(rp, m);
 }
@@ -365,7 +365,7 @@ void BTree::_for_each(int p, int lv, function<void(BElement)> f, Metrics *m) {
     }
 
     BNode &nd = _mem[lv];
-    _stg.read_page(nd, p, m);
+    _stg.read_page(nd, p, m, "_for_each");
 
     int p0 = nd.p(0);
     _for_each(p0, lv + 1, f, m);
@@ -385,7 +385,7 @@ void BTree::for_each(function<void(BElement)> f, Metrics *m) {
 
 void BTree::_dump(int p, int lv, Metrics *m) {
     BNode &nd = _mem[lv];
-    _stg.read_page(nd, p, m);
+    _stg.read_page(nd, p, m, "_dump");
     assert(nd.m > 0);
     assert(nd.idx == p);
     cout << "{" << lv << "} " << p << ": [";
@@ -429,7 +429,7 @@ void BTree::_grow(int p0, BElement e1, int p1, Metrics *m) {
     hdr.s = exnd.idx;
     ++hdr.h;
     _stg.write_header(hdr, m);
-    _stg.write_page(exnd, m);
+    _stg.write_page(exnd, m, "_grow");
 }
 
 void BTree::_shrink(BNode &rnd, Metrics *m) {

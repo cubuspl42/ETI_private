@@ -14,13 +14,13 @@ void MemStorage::write_header(BTreeHeader header, Metrics *m) {
     _hdr = header;
 }
 
-void MemStorage::read_page(BNode &pg, int i, Metrics *m) {
+void MemStorage::read_page(BNode &pg, int i, Metrics *m, string msg) {
     assert(i >= 0);
     assert(i < (int) _nodes.size());
     pg = _nodes[i];
 }
 
-void MemStorage::write_page(const BNode &pg, int i, Metrics *m) {
+void MemStorage::write_page(const BNode &pg, int i, Metrics *m, string msg) {
     assert(i >= 0);
     if(i >= (int) _nodes.size()) {
         _nodes.resize((unsigned long) (i + 1));

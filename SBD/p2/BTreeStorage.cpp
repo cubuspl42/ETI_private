@@ -11,7 +11,7 @@ void BTreeStorage::dump() {
     for(int i = 0; i < hdr.n; ++i) {
         cout << i << ": ";
         BNode nd;
-        read_page(nd, i, nullptr);
+        read_page(nd, i, nullptr, "BTreeStorage::dump");
         nd.dump();
         cout << endl;
     }

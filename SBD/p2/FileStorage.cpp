@@ -56,8 +56,11 @@ void FileStorage::write_header(BTreeHeader header, Metrics *m) {
     assert(rv == 1);
 }
 
-void FileStorage::read_page(BNode &nd, int i, Metrics *m) {
-    if(m) m->inc_page_reads();
+void FileStorage::read_page(BNode &nd, int i, Metrics *m, string msg) {
+    if(m) {
+        m->inc_page_reads();
+        cout << "read_page: " << msg << " [" << i << "]" << endl;
+    }
     int rv;
     rv = fseek(file.get(), SIZEOF_BTREE_HEADER + i * SIZEOF_NODE, SEEK_SET);
     assert(rv > -1);
@@ -71,8 +74,11 @@ void FileStorage::read_page(BNode &nd, int i, Metrics *m) {
     assert(rv == NODE_DATA_STORAGE_SIZE);
 }
 
-void FileStorage::write_page(const BNode &nd, int i, Metrics *m) {
-    if(m) m->inc_page_writes();
+void FileStorage::write_page(const BNode &nd, int i, Metrics *m, string msg) {
+    if(m) {
+        m->inc_page_writes();
+        cout << "write_page: " << msg << " [" << i << "]" << endl;
+    }
     int rv;
     assert(i >= 0);
     rv = fseek(file.get(), SIZEOF_BTREE_HEADER + i * SIZEOF_NODE, SEEK_SET);

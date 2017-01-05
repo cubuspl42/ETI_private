@@ -11,6 +11,7 @@ update 812 0 0 0 0 0 77
 find 812
 insert 12 0 0 0 0 0 9
 insert 734 0 0 0 0 0 10
+print
 insert 194 0 0 0 0 0 11
 remove 642
 remove 194
@@ -23,8 +24,8 @@ find 194
 insert 7163 0 0 0 0 0 0
 insert 14343 0 0 0 0 0 0
 insert 1345 0 0 0 0 0 0
+print
 insert 894 0 0 0 0 0 0
+print
 insert 1435 0 0 0 0 0 0
-print
 insert 451 0 0 0 0 0 0
-print

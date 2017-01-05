@@ -20,9 +20,9 @@ public:
 
     virtual void write_header(BTreeHeader header, Metrics *m) override;
 
-    virtual void read_page(BNode &pg, int i, Metrics *m) override;
+    virtual void read_page(BNode &pg, int i, Metrics *m, string msg) override;
 
-    virtual void write_page(const BNode &pg, int i, Metrics *m) override;
+    virtual void write_page(const BNode &pg, int i, Metrics *m, string msg) override;
 };
 
 
