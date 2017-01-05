@@ -114,7 +114,7 @@ struct BNode {
         assert(!overflows());
         data.insert(data.begin() + m + 1, Ep{e, NIL});
         ++m;
-        sort(e_begin(), e_end()); // FIXME: last element? m?
+        sort(e_begin(), e_end());
         data.resize(NODE_DATA_MEMORY_SIZE);
     }
 

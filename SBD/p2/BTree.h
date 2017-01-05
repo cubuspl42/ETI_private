@@ -24,8 +24,6 @@ class BTree {
     BTreeStorage &_stg;
     vector<BNode> _mem;
     BTreeHeader hdr;
-//    int s = NIL; // FIXME: Writeback
-    int d = D; // FIXME: Dynamic
 
     BNode &_extra_buf();
 
