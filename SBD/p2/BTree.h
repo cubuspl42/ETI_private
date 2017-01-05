@@ -52,6 +52,8 @@ class BTree {
 
     void _fix_underflow(BTreeStorage &stg, std::vector<BNode> &mem, int lv);
 
+    void _grow(int p0, BElement e1, int p1);
+
     void _shrink(BNode &rnd);
 
     void _resize_mem();

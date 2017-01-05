@@ -114,15 +114,8 @@ void BTree::_fix_overflow(BTreeStorage &stg, vector<BNode> &mem, int lv) {
         _stg.write_page(exnd);
         _stg.write_header(hdr); // TODO: When to write header?
 
-        if (lv == 0) { // TODO: Refactor -> _grow_tree
-            _allocate_node(exnd);
-            exnd.m = 1;
-            exnd.data[0] = Ep{BElement{-1, -1}, nd.idx};
-            exnd.data[1] = Ep{me, nnd_idx};
-            hdr.s = exnd.idx;
-            ++hdr.h; // TODO: Extract! Resize mem?
-            _stg.write_header(hdr);
-            _stg.write_page(exnd);
+        if (lv == 0) {
+            _grow(nd.idx, me, nnd_idx);
         } else {
             BNode &pnd = mem[lv - 1];
             int c = pnd.find_child(nd.idx);
@@ -187,16 +180,8 @@ void BTree::_fix_underflow(BTreeStorage &stg, std::vector<BNode> &mem, int lv) {
 
 InsertStatus BTree::insert(int x, int a) {
     _resize_mem();
-    if (hdr.s == NIL) { // TODO: Refactor -> _grow
-        BNode &root = _extra_buf();
-        _allocate_node(root);
-        ++hdr.h;
-        root.m = 1;
-        root.data[0] = Ep{BElement{-1, -1}, NIL};
-        root.data[1] = Ep{BElement{x, a}, NIL};
-        hdr.s = root.idx;
-        _stg.write_header(hdr);
-        _stg.write_page(root);
+    if (hdr.s == NIL) {
+        _grow(NIL, BElement{x, a}, NIL);
         return OK;
     } else {
         auto fr = _find(_stg, _mem, 0, hdr.s, x);
@@ -467,6 +452,18 @@ void BTree::dump() {
 BTree::BTree(BTreeStorage &stg) : _stg{stg} {
     hdr = stg.read_header();
     _resize_mem();
+}
+
+void BTree::_grow(int p0, BElement e1, int p1) {
+    BNode &exnd = _extra_buf();
+    _allocate_node(exnd);
+    exnd.m = 1;
+    exnd.data[0] = Ep{BElement{-1, -1}, p0};
+    exnd.data[1] = Ep{e1, p1};
+    hdr.s = exnd.idx;
+    ++hdr.h;
+    _stg.write_header(hdr);
+    _stg.write_page(exnd);
 }
 
 void BTree::_shrink(BNode &rnd) {
