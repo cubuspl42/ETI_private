@@ -35,21 +35,21 @@ class BTree {
      * @param x key
      * @return (page, value) or (page, NOT_FOUND)
      */
-    BFindResult _find(BTreeStorage &stg, vector<BNode> &mem, int lv, int p, int x);
+    BFindResult _find(int lv, int p, int x);
 
-    BFindResult _find_max(BTreeStorage &stg, vector<BNode> &mem, int lv, int p);
+    BFindResult _find_max(int lv, int p);
 
-    CompensateStatus _compensate(BTreeStorage &stg, BNode &lnd, BNode &pnd);
+    CompensateStatus _compensate(BNode &lnd, BNode &pnd);
 
     BElement _split(BNode &nd, BNode &nnd);
 
     void _merge(BNode &nd, BNode &nnd, BNode &pnd, int ei);
 
-    void _for_each(int p, vector<BNode> &mem, int lv, function<void(BElement)> f);
+    void _for_each(int p, int lv, function<void(BElement)> f);
 
-    void _fix_overflow(BTreeStorage &stg, std::vector<BNode> &mem, int lv);
+    void _fix_overflow(int lv);
 
-    void _fix_underflow(BTreeStorage &stg, std::vector<BNode> &mem, int lv);
+    void _fix_underflow(int lv);
 
     void _grow(int p0, BElement e1, int p1);
 
