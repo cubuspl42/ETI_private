@@ -22,6 +22,7 @@ set(SOURCES
         FileStorage.cpp
         FileStorage.h
         BElement.h
+        BFindResult.h
         )
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -pedantic -Werror")
