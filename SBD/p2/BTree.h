@@ -27,6 +27,12 @@ class BTree {
 //    int s = NIL; // FIXME: Writeback
     int d = D; // FIXME: Dynamic
 
+    BNode &_extra_buf();
+
+    void _allocate_node(BNode &nd);
+
+    void _free_node(BNode &nd);
+
     /**
      * @param p initial page index
      * @param x key

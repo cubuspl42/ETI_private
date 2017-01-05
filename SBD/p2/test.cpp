@@ -78,8 +78,9 @@ static bool check_ms2(MemStorage ac, MemStorage ex, BTree &bt) {
     return ac == ex;
 }
 
-static BNode node0() {
+static BNode nodeD(int next) {
     BNode nd;
+    nd.idx = next;
     nd.m = 0;
     auto &d = nd.data;
     d[0].p = NIL;
@@ -131,8 +132,8 @@ static BNode node4(int p0, BElement e1, int p1, BElement e2, int p2, BElement e3
 
 static void test_find_simple() {
     MemStorage ms{
-            //s  h  n
-            {0, 2, 3},
+    //       s  h  n  f
+            {0, 2, 3, NIL},
             {
                     node1(1, {10, 0}, 2),
                     node3(NIL, {1, 0}, NIL, {2, 123}, NIL, {4, 0}, NIL),
@@ -147,8 +148,8 @@ static void test_find_simple() {
 
 static void test_find_not_found() {
     MemStorage ms{
-            //s  h  n
-            {0, 2, 3},
+    //       s  h  n  f
+            {0, 2, 3, NIL},
             {
                     node1(1, {10, 0}, 2),
                     node3(NIL, {1, 0}, NIL, {2, 123}, NIL, {4, 0}, NIL),
@@ -162,8 +163,8 @@ static void test_find_not_found() {
 
 static void test_find_empty_tree() {
     MemStorage ms{
-            //s  h  n
-            {NIL, 0, 0},
+    //       s  h  n  f
+            {NIL, 0, 0, NIL},
             {}
     };
     BTree bt{ms};
@@ -181,8 +182,8 @@ static void test_new_root() {
 
 static void test_insert_simple() {
     MemStorage ms{
-            //s  h  n
-            {0, 2, 3},
+    //       s  h  n  f
+            {0, 2, 3, NIL},
             {
                     node1(1, {10, 0}, 2),
                     node3(NIL, {1, 0}, NIL, {2, 0}, NIL, {4, 0}, NIL),
@@ -190,8 +191,8 @@ static void test_insert_simple() {
             }
     };
     const MemStorage ms2{
-            //s  h  n
-            {0, 2, 3},
+    //       s  h  n  f
+            {0, 2, 3, NIL},
             {
                     node1(1, {10, 0}, 2),
                     node4(NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
@@ -205,15 +206,15 @@ static void test_insert_simple() {
 
 static void test_insert2() {
     MemStorage ms{
-            //s  h  n
-            {0, 1, 1},
+    //       s  h  n  f
+            {0, 1, 1, NIL},
             {
                     node1(NIL, {10, 0}, NIL),
             }
     };
     const MemStorage ms2{
-            //s  h  n
-            {0, 1, 1},
+    //       s  h  n  f
+            {0, 1, 1, NIL},
             {
                     node3(NIL, {10, 0}, NIL, {20, 0}, NIL, {30, 0}, NIL),
             }
@@ -226,15 +227,15 @@ static void test_insert2() {
 
 static void test_split_root() {
     MemStorage ms{
-            //s  h  n
-            {0, 1, 1},
+    //       s  h  n  f
+            {0, 1, 1, NIL},
             {
                     node4(NIL, {1, 2}, NIL, {2, 3}, NIL, {3, 4}, NIL, {4, 5}, NIL),
             }
     };
     const MemStorage ms2{
-            //s  h  n
-            {2, 2, 3},
+    //       s  h  n  f
+            {2, 2, 3, NIL},
             {
                     node2(NIL, {1, 2}, NIL, {2, 3}, NIL),
                     node2(NIL, {4, 5}, NIL, {5, 6}, NIL),
@@ -248,13 +249,13 @@ static void test_split_root() {
 
 static void test_insert_full() {
     MemStorage ms{
-            //s  h  n
-            {NIL, 0, 0},
+    //       s  h  n  f
+            {NIL, 0, 0, NIL},
             {}
     };
     const MemStorage ms2{
-            //s  h  n
-            {0, 1, 1},
+    //       s  h  n  f
+            {0, 1, 1, NIL},
             {
                     node4(NIL, {10, 0}, NIL, {20, 0}, NIL, {30, 0}, NIL, {40, 0}, NIL)
             }
@@ -269,13 +270,13 @@ static void test_insert_full() {
 
 static void test_insert_stairs() {
     MemStorage ms{
-            //s  h  n
-            {NIL, 0, 0},
+    //       s  h  n  f
+            {NIL, 0, 0, NIL},
             {}
     };
     const MemStorage ms2{
-            //s  h  n
-            {2, 2, 3},
+    //       s  h  n  f
+            {2, 2, 3, NIL},
             {
                     node2(NIL, {10, 0}, NIL, {11, 0}, NIL),
                     node2(NIL, {30, 0}, NIL, {40, 0}, NIL),
@@ -293,13 +294,13 @@ static void test_insert_stairs() {
 
 static void test_insert_stairs2() {
     MemStorage ms{
-            //s  h  n
-            {NIL, 0, 0},
+    //       s  h  n  f
+            {NIL, 0, 0, NIL},
             {}
     };
     const MemStorage ms2{
-            //s  h  n
-            {2, 2, 3},
+    //       s  h  n  f
+            {2, 2, 3, NIL},
             {
                     node4(NIL, {10, 0}, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
                     node4(NIL, {20, 0}, NIL, {21, 0}, NIL, {30, 0}, NIL, {40, 0}, NIL),
@@ -321,13 +322,13 @@ static void test_insert_stairs2() {
 
 static void test_insert_stairs3() {
     MemStorage ms{
-            //s  h  n
-            {NIL, 0, 0},
+    //       s  h  n  f
+            {NIL, 0, 0, NIL},
             {}
     };
     const MemStorage ms2{
-            //s  h  n
-            {2, 2, 4},
+    //       s  h  n  f
+            {2, 2, 4, NIL},
             {
                     node4(NIL, {10, 0}, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
                     node2(NIL, {20, 0}, NIL, {21, 0}, NIL),
@@ -351,13 +352,13 @@ static void test_insert_stairs3() {
 
 static void test_insert_stairs4() {
     MemStorage ms{
-            //s  h  n
-            {NIL, 0, 0},
+    //       s  h  n  f
+            {NIL, 0, 0, NIL},
             {}
     };
     const MemStorage ms2{
-            //s  h  n
-            {2, 2, 4},
+    //       s  h  n  f
+            {2, 2, 4, NIL},
             {
                     node4(NIL, {10, 0}, NIL, {11, 0}, NIL, {12, 0}, NIL, {13, 0}, NIL),
                     node4(NIL, {20, 0}, NIL, {21, 0}, NIL, {22, 0}, NIL, {23, 0}, NIL),
@@ -388,8 +389,8 @@ static void test_insert_stairs4() {
 
 static void test_split_chained() {
     MemStorage ms{
-            //s  h  n
-            {0, 2, 6},
+    //       s  h  n  f
+            {0, 2, 6, NIL},
             {
                     node4(1, {10, 0}, 2, {20, 0}, 3, {30, 0}, 4, {40, 0}, 5),
                     node4(NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
@@ -400,8 +401,8 @@ static void test_split_chained() {
             }
     };
     const MemStorage ms2{
-            //s  h  n
-            {8, 3, 9},
+    //       s  h  n  f
+            {8, 3, 9, NIL},
             {
                     node2(1, {10, 0}, 2, {20, 0}, 3),
                     node4(NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
@@ -421,8 +422,8 @@ static void test_split_chained() {
 
 static void test_compensate_even() {
     MemStorage ms{
-            //s  h  n
-            {0, 2, 3},
+    //       s  h  n  f
+            {0, 2, 3, NIL},
             {
                     node1(1, {10, 0}, 2),
                     node4(NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
@@ -430,8 +431,8 @@ static void test_compensate_even() {
             }
     };
     const MemStorage ms2{
-            //s  h  n
-            {0, 2, 3},
+    //       s  h  n  f
+            {0, 2, 3, NIL},
             {
                     node1(1, {5, 0}, 2),
                     node4(NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
@@ -445,8 +446,8 @@ static void test_compensate_even() {
 
 static void test_compensate_odd() {
     MemStorage ms{
-            //s  h  n
-            {0, 2, 3},
+    //       s  h  n  f
+            {0, 2, 3, NIL},
             {
                     node1(1, {10, 0}, 2),
                     node4(NIL, {1, 0}, NIL, {2, 0}, NIL, {4, 0}, NIL, {5, 0}, NIL),
@@ -454,8 +455,8 @@ static void test_compensate_odd() {
             }
     };
     const MemStorage ms2{
-            //s  h  n
-            {0, 2, 3},
+    //       s  h  n  f
+            {0, 2, 3, NIL},
             {
                     node1(1, {5, 0}, 2),
                     node4(NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
@@ -469,8 +470,8 @@ static void test_compensate_odd() {
 
 static void test_compensate_inner_node() {
     MemStorage ms{
-            //s  h  n
-            {0, 3, 11},
+    //       s  h  n  f
+            {0, 3, 11, NIL},
             {
                     node1(1, {100, 0}, 2),
                     node4(3, {10, 0}, 4, {20, 0}, 5, {30, 0}, 6, {40, 0}, 7),
@@ -486,8 +487,8 @@ static void test_compensate_inner_node() {
             }
     };
     const MemStorage ms2{
-            //s  h  n
-            {0, 3, 12},
+    //       s  h  n  f
+            {0, 3, 12, NIL},
             {
                     node1(1, {40, 0}, 2),
                     node4(3, {10, 0}, 4, {20, 0}, 5, {23, 0}, 11, {30, 0}, 6),
@@ -510,8 +511,8 @@ static void test_compensate_inner_node() {
 
 static void test_compensate_left() {
     MemStorage ms{
-            //s  h  n
-            {0, 2, 3},
+    //       s  h  n  f
+            {0, 2, 3, NIL},
             {
                     node1(1, {10, 0}, 2),
                     node3(NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL),
@@ -519,8 +520,8 @@ static void test_compensate_left() {
             }
     };
     const MemStorage ms2{
-            //s  h  n
-            {0, 2, 3},
+    //       s  h  n  f
+            {0, 2, 3, NIL},
             {
                     node1(1, {11, 0}, 2),
                     node4(NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {10, 0}, NIL),
@@ -534,8 +535,8 @@ static void test_compensate_left() {
 
 static void test_remove_compensate_left() {
     MemStorage ms{
-            //s  h  n
-            {0, 2, 3},
+    //       s  h  n  f
+            {0, 2, 3, NIL},
             {
                     node1(1, {10, 0}, 2),
                     node3(NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL),
@@ -543,8 +544,8 @@ static void test_remove_compensate_left() {
             }
     };
     const MemStorage ms2{
-            //s  h  n
-            {0, 2, 3},
+    //       s  h  n  f
+            {0, 2, 3, NIL},
             {
                     node1(1, {3, 0}, 2),
                     node2(NIL, {1, 0}, NIL, {2, 0}, NIL),
@@ -558,8 +559,8 @@ static void test_remove_compensate_left() {
 
 static void test_remove_compensate_right() {
     MemStorage ms{
-            //s  h  n
-            {0, 2, 3},
+    //       s  h  n  f
+            {0, 2, 3, NIL},
             {
                     node1(1, {10, 0}, 2),
                     node2(NIL, {1, 0}, NIL, {2, 0}, NIL),
@@ -567,8 +568,8 @@ static void test_remove_compensate_right() {
             }
     };
     const MemStorage ms2{
-            //s  h  n
-            {0, 2, 3},
+    //       s  h  n  f
+            {0, 2, 3, NIL},
             {
                     node1(1, {11, 0}, 2),
                     node2(NIL, {1, 0}, NIL, {10, 0}, NIL),
@@ -582,8 +583,8 @@ static void test_remove_compensate_right() {
 
 static void test_remove_merge() {
     MemStorage ms{
-            //s  h  n
-            {0, 2, 5},
+    //       s  h  n  f
+            {0, 2, 5, NIL},
             {
                     node3(1, {10, 0}, 2, {20, 0}, 3, {30, 0}, 4),
                     node2(NIL, {1, 0}, NIL, {2, 0}, NIL),
@@ -593,12 +594,12 @@ static void test_remove_merge() {
             }
     };
     const MemStorage ms2{
-            //s  h  n
-            {0, 2, 5},
+    //       s  h  n  f
+            {0, 2, 5, NIL},
             {
                     node2(1, {20, 0}, 3, {30, 0}, 4),
                     node4(NIL, {1, 0}, NIL, {2, 0}, NIL, {10, 0}, NIL, {11, 0}, NIL),
-                    node0(),
+                    nodeD(NIL),
                     node2(NIL, {21, 0}, NIL, {22, 0}, NIL),
                     node2(NIL, {31, 0}, NIL, {32, 0}, NIL),
             }
@@ -608,10 +609,10 @@ static void test_remove_merge() {
     assert(check_ms(ms, ms2));
 }
 
-static void test_remove_merge_root() {
+static void test_remove_merge_shrink() {
     MemStorage ms{
-            //s  h  n
-            {0, 2, 3},
+    //       s  h  n  f
+            {0, 2, 3, NIL},
             {
                     node1(1, {10, 0}, 2),
                     node2(NIL, {1, 0}, NIL, {2, 0}, NIL),
@@ -619,12 +620,12 @@ static void test_remove_merge_root() {
             }
     };
     const MemStorage ms2{
-            //s  h  n
-            {1, 1, 3},
+    //       s  h  n  f
+            {1, 1, 3, 0},
             {
-                    node0(),
+                    nodeD(2),
                     node4(NIL, {1, 0}, NIL, {10, 0}, NIL, {11, 0}, NIL, {12, 0}, NIL),
-                    node0(),
+                    nodeD(NIL),
             }
     };
     BTree bt{ms};
@@ -634,8 +635,8 @@ static void test_remove_merge_root() {
 
 static void test_remove_swap() {
     MemStorage ms{
-            //s  h  n
-            {0, 2, 3},
+    //       s  h  n  f
+            {0, 2, 3, NIL},
             {
                     node1(1, {10, 0}, 2),
                     node4(NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
@@ -643,8 +644,8 @@ static void test_remove_swap() {
             }
     };
     const MemStorage ms2{
-            //s  h  n
-            {0, 2, 3},
+    //       s  h  n  f
+            {0, 2, 3, NIL},
             {
                     node1(1, {4, 0}, 2),
                     node3(NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL),
@@ -658,17 +659,17 @@ static void test_remove_swap() {
 
 static void test_remove_root() {
     MemStorage ms{
-            //s  h  n
-            {0, 1, 1},
+    //       s  h  n  f
+            {0, 1, 1, NIL},
             {
                     node1(NIL, {10, 0}, NIL),
             }
     };
     const MemStorage ms2{
-            //s  h  n
-            {NIL, 0, 1},
+    //       s    h  n  f
+            {NIL, 0, 1, 0},
             {
-                    node0(),
+                    nodeD(-1),
             }
     };
     BTree bt{ms};
@@ -678,8 +679,8 @@ static void test_remove_root() {
 
 static void test_update_simple() {
     MemStorage ms{
-            //s  h  n
-            {0, 2, 3},
+    //       s  h  n  f
+            {0, 2, 3, NIL},
             {
                     node1(1, {10, 0}, 2),
                     node4(NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
@@ -687,8 +688,8 @@ static void test_update_simple() {
             }
     };
     const MemStorage ms2{
-            //s  h  n
-            {0, 2, 3},
+    //       s  h  n  f
+            {0, 2, 3, NIL},
             {
                     node1(1, {10, 0}, 2),
                     node4(NIL, {1, 0}, NIL, {2, 0}, NIL, {3, 0}, NIL, {4, 0}, NIL),
@@ -721,7 +722,7 @@ int main(int argc, const char *argv[]) {
     test_remove_compensate_left();
     test_remove_compensate_right();
     test_remove_merge();
-    test_remove_merge_root();
+    test_remove_merge_shrink();
     test_remove_swap();
     test_remove_root();
     test_update_simple();

@@ -14,7 +14,11 @@ class MemStorage : public BTreeStorage {
 public:
     MemStorage() = default;
 
-    MemStorage(BTreeHeader hdr, vector<BNode> nodes) : _hdr(hdr), _nodes(move(nodes)) {}
+    MemStorage(BTreeHeader hdr, vector<BNode> nodes) : _hdr(hdr), _nodes(move(nodes)) {
+        for(int i = 0; i < (int) _nodes.size(); ++i) {
+            if(_nodes[i].m > 0) _nodes[i].idx = i;
+        }
+    }
 
     virtual BTreeHeader read_header() override;
 
@@ -22,7 +26,7 @@ public:
 
     virtual void read_page(BNode &pg, int i) override;
 
-    virtual void write_page(const BNode &pg) override;
+    virtual void write_page(const BNode &pg, int i) override;
 
     bool operator==(const MemStorage &o);
 

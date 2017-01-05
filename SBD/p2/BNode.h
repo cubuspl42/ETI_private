@@ -147,7 +147,7 @@ struct BNode {
     bool operator==(const BNode &o) const {
         auto begin = data.begin();
         auto end = data.begin() + m + 1;
-        return m == o.m && equal(begin, end, o.data.begin());
+        return idx == o.idx && m == o.m && equal(begin, end, o.data.begin());
     }
 
     void dump() const {

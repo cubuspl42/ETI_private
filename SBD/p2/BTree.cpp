@@ -7,6 +7,32 @@
 #include "BFindResult.h"
 #include "BElement.h"
 
+BNode &BTree::_extra_buf() {
+    assert((int) _mem.size() == hdr.h + 1);
+    return _mem.back();
+}
+
+void BTree::_allocate_node(BNode &nd) {
+    int f = hdr.f;
+    if(f > -1) {
+        _stg.read_page(nd, f);
+        hdr.f = nd.idx;
+        nd.idx = f;
+        nd.m = 0;
+    } else {
+        nd.idx = hdr.n++;
+        nd.m = 0;
+    }
+}
+
+void BTree::_free_node(BNode &nd) {
+    int i = nd.idx;
+    nd.idx = hdr.f;
+    nd.m = 0;
+    hdr.f = i;
+    _stg.write_page(nd, i); // TODO: Minimize page writes?
+}
+
 BFindResult BTree::_find(BTreeStorage &stg, vector<BNode> &mem, int lv, int p, int x) {
     BNode &nd = mem[lv];
     stg.read_page(nd, p);
@@ -79,8 +105,8 @@ void BTree::_fix_overflow(BTreeStorage &stg, vector<BNode> &mem, int lv) {
             }
         }
 
-        int nnd_idx = hdr.n++; // TODO: -> allocate node
-        exnd.idx = nnd_idx;
+        _allocate_node(exnd);
+        int nnd_idx = exnd.idx;
 
         BElement me = _split(nd, exnd);
 
@@ -89,7 +115,7 @@ void BTree::_fix_overflow(BTreeStorage &stg, vector<BNode> &mem, int lv) {
         _stg.write_header(hdr); // TODO: When to write header?
 
         if (lv == 0) { // TODO: Refactor -> _grow_tree
-            exnd.idx = hdr.n++;
+            _allocate_node(exnd);
             exnd.m = 1;
             exnd.data[0] = Ep{BElement{-1, -1}, nd.idx};
             exnd.data[1] = Ep{me, nnd_idx};
@@ -154,14 +180,16 @@ void BTree::_fix_underflow(BTreeStorage &stg, std::vector<BNode> &mem, int lv) {
         }
     }
 
-    _stg.write_page(nd);
+    if(nd.m > 0) {
+        _stg.write_page(nd);
+    }
 }
 
 InsertStatus BTree::insert(int x, int a) {
     _resize_mem();
     if (hdr.s == NIL) { // TODO: Refactor -> _grow
-        BNode &root = _mem[0];
-        root.idx = hdr.n++;
+        BNode &root = _extra_buf();
+        _allocate_node(root);
         ++hdr.h;
         root.m = 1;
         root.data[0] = Ep{BElement{-1, -1}, NIL};
@@ -375,24 +403,9 @@ void BTree::_merge(BNode &lp, BNode &rp, BNode &pnd, int ei) {
 
     pnd.emerge(ei, lp.idx);
 
-    _stg.write_page(lp); // TOOD: Minimize page writes?
-    _stg.write_page(rp);
+    _stg.write_page(lp); // TODO: Minimize page writes?
 
-    // TODO: Delete @rp
-
-#if 0
-    BPageBuf &lpb = lp.buf();
-    BPageBuf &rpb = rp.buf();
-    BElement el = ppgb.e(i);
-    vector<BElement> ve = lpb.ve();
-    ve.push_back(el);
-    ve.insert(ve.end(), rpb.ve().begin(), rpb.ve().end());
-    vector<int> vp = lpb.vp();
-    vp.insert(vp.end(), rpb.vp().begin(), rpb.vp().end());
-    BPageB + 1uf buf{ve, vp};
-    ppgb.emerge(i, lp.idx());
-    // FIXME: Garbage collect @rp
-#endif
+    _free_node(rp);
 }
 
 void BTree::_for_each(int p, vector<BNode> &mem, int lv, function<void(BElement)> f) {
@@ -465,6 +478,7 @@ void BTree::_shrink(BNode &rnd) {
     --hdr.h;
     hdr.s = p0;
 
+    _free_node(rnd);
     _stg.write_header(hdr);
 }
 

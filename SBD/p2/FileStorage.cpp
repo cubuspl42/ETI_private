@@ -55,10 +55,10 @@ void FileStorage::read_page(BNode &nd, int i) {
     assert(rv == NODE_DATA_STORAGE_SIZE);
 }
 
-void FileStorage::write_page(const BNode &nd) {
+void FileStorage::write_page(const BNode &nd, int i) {
     int rv;
-    assert(nd.idx >= 0);
-    rv = fseek(file.get(), SIZEOF_BTREE_HEADER + nd.idx * SIZEOF_NODE, SEEK_SET);
+    assert(i >= 0);
+    rv = fseek(file.get(), SIZEOF_BTREE_HEADER + i * SIZEOF_NODE, SEEK_SET);
     assert(rv > -1);
     int t[2] = {nd.idx, nd.m};
     rv = fwrite(t, sizeof(int), 2, file.get());

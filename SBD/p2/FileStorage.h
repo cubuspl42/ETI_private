@@ -19,7 +19,7 @@ public:
 
     virtual void read_page(BNode &pg, int i) override;
 
-    virtual void write_page(const BNode &pg) override;
+    virtual void write_page(const BNode &pg, int i) override;
 };
 
 
