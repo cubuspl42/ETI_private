@@ -247,6 +247,53 @@ static void test_split_root() {
     assert(check_ms(ms, ms2));
 }
 
+static void test_insert_split_root_reuse() {
+    MemStorage ms{
+    //       s  h  n  f
+            {1, 1, 2, 0},
+            {
+                    nodeD(NIL),
+                    node4(NIL, {1, 2}, NIL, {2, 3}, NIL, {3, 4}, NIL, {4, 5}, NIL),
+            }
+    };
+    const MemStorage ms2{
+    //       s  h  n  f
+            {2, 2, 3, NIL},
+            {
+                    node2(NIL, {4, 5}, NIL, {5, 6}, NIL),
+                    node2(NIL, {1, 2}, NIL, {2, 3}, NIL),
+                    node1(1, {3, 4}, 0),
+            }
+    };
+    BTree bt{ms};
+    bt.insert(5, 6);
+    assert(check_ms(ms, ms2));
+}
+
+static void test_insert_split_root_reuse2() {
+    MemStorage ms{
+    //       s  h  n  f
+            {2, 1, 3, 0},
+            {
+                    nodeD(1),
+                    nodeD(NIL),
+                    node4(NIL, {1, 2}, NIL, {2, 3}, NIL, {3, 4}, NIL, {4, 5}, NIL),
+            }
+    };
+    const MemStorage ms2{
+    //       s  h  n  f
+            {1, 2, 3, NIL},
+            {
+                    node2(NIL, {4, 5}, NIL, {5, 6}, NIL),
+                    node1(2, {3, 4}, 0),
+                    node2(NIL, {1, 2}, NIL, {2, 3}, NIL),
+            }
+    };
+    BTree bt{ms};
+    bt.insert(5, 6);
+    assert(check_ms(ms, ms2));
+}
+
 static void test_insert_full() {
     MemStorage ms{
     //       s  h  n  f
@@ -609,6 +656,35 @@ static void test_remove_merge() {
     assert(check_ms(ms, ms2));
 }
 
+static void test_remove_merge_p0() {
+    MemStorage ms{
+    //       s  h  n  f
+            {0, 2, 5, NIL},
+            {
+                    node3(1, {10, 0}, 2, {20, 0}, 3, {30, 0}, 4),
+                    node2(NIL, {1, 0}, NIL, {2, 0}, NIL),
+                    node2(NIL, {11, 0}, NIL, {12, 0}, NIL),
+                    node2(NIL, {21, 0}, NIL, {22, 0}, NIL),
+                    node2(NIL, {31, 0}, NIL, {32, 0}, NIL),
+            }
+    };
+    const MemStorage ms2{
+    //       s  h  n  f
+            {0, 2, 5, NIL},
+            {
+                    node2(1, {20, 0}, 3, {30, 0}, 4),
+                    node4(NIL, {1, 0}, NIL, {10, 0}, NIL, {11, 0}, NIL, {12, 0}, NIL),
+                    nodeD(NIL),
+                    node2(NIL, {21, 0}, NIL, {22, 0}, NIL),
+                    node2(NIL, {31, 0}, NIL, {32, 0}, NIL),
+            }
+    };
+    BTree bt{ms};
+    bt.remove(2);
+    assert(check_ms(ms, ms2));
+}
+
+
 static void test_remove_merge_shrink() {
     MemStorage ms{
     //       s  h  n  f
@@ -714,6 +790,8 @@ int main(int argc, const char *argv[]) {
     test_insert_stairs3();
     test_insert_stairs4();
     test_split_root();
+    test_insert_split_root_reuse();
+    test_insert_split_root_reuse2();
     test_split_chained();
     test_compensate_even();
     test_compensate_odd();
@@ -722,6 +800,7 @@ int main(int argc, const char *argv[]) {
     test_remove_compensate_left();
     test_remove_compensate_right();
     test_remove_merge();
+    test_remove_merge_p0();
     test_remove_merge_shrink();
     test_remove_swap();
     test_remove_root();

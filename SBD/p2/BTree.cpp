@@ -470,6 +470,7 @@ BTree::BTree(BTreeStorage &stg) : _stg{stg} {
 }
 
 void BTree::_shrink(BNode &rnd) {
+    assert(rnd.idx == hdr.s);
     assert(rnd.m == 0);
     int p0 = rnd.p(0);
 
