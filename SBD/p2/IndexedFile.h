@@ -1,7 +1,6 @@
 #ifndef P2_INDEXEDFILE_H
 #define P2_INDEXEDFILE_H
 
-#include "PagedFile.h"
 #include "Record.h"
 #include "BTree.h"
 #include "ContentFile.h"

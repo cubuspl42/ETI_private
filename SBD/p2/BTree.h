@@ -9,7 +9,6 @@
 #include <stack>
 #include <vector>
 #include "common.h"
-#include "PagedFile.h"
 #include "BTreeStorage.h"
 #include "BNode.h"
 #include "BFindResult.h"

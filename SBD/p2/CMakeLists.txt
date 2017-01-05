@@ -3,8 +3,6 @@ set(PROJECT p2)
 project(${PROJECT})
 
 set(SOURCES
-        PagedFile.h
-        PagedFile.cpp
         BNode.h
         BNode.cpp
         IndexedFile.h

@@ -22,6 +22,4 @@ public:
     void dump();
 };
 
-#include "PagedFile.h"
-
 #endif //P2_BSTORAGE_H
