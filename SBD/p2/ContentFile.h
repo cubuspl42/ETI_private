@@ -14,6 +14,7 @@ public:
     ContentFile(string path);
     Record read_record(int i);
     int write_record(Record r);
+    void write_record(Record r, int i);
 };
 
 #endif //P2_CONTENTFILE_H

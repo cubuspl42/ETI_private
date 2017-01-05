@@ -28,6 +28,14 @@ Record IndexedFile::remove(int k) {
     // TODO: Release space in content file?
 }
 
+Record IndexedFile::update(int k, Record nr) {
+    int a = index.find(k);
+    assert(a != NOT_FOUND);
+    Record olr = content.read_record(a);
+    content.write_record(nr, a);
+    return olr;
+}
+
 void IndexedFile::for_each(function<void(int, Record)> f) {
     index.for_each([&](BElement e) {
         int k = e.x;

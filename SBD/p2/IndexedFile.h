@@ -25,6 +25,8 @@ public:
 
     Record remove(int k);
 
+    Record update(int k, Record nr);
+
     void for_each(function<void(int, Record)> f);
 
     vector<pair<int, Record>> to_vector();

@@ -30,3 +30,11 @@ int ContentFile::write_record(Record r) {
     assert(nr == 1);
     return a;
 }
+
+void ContentFile::write_record(Record r, int i) {
+    int rv;
+    rv = fseek(file.get(), sizeof(Record) * i, SEEK_SET);
+    assert(rv == 0);
+    int nr = fwrite(&r, sizeof(Record), 1, file.get());
+    assert(nr == 1);
+}

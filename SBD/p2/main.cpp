@@ -64,7 +64,7 @@ static vector<pair<int, Record>> idf2vec(IndexedFile &idf) {
 
 static void dump_vec(const vector<pair<int, Record>> &v) {
     cout << "[ ";
-    for(auto p : v) {
+    for (auto p : v) {
         cout << p.first << ":" << p.second << " ";
     }
     cout << "]";
@@ -73,7 +73,7 @@ static void dump_vec(const vector<pair<int, Record>> &v) {
 static void check(const map<int, Record> &s, IndexedFile &idf) {
     auto sv = map2vec(s);
     auto btv = idf2vec(idf);
-    if(sv != btv) {
+    if (sv != btv) {
         cout << "sv: ";
         dump_vec(sv);
         cout << endl << endl;
@@ -119,11 +119,22 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
             assert(!is_cmd.fail());
             cout << "FIND " << k << endl;
             auto p = idf.find(k);
-            if(p.first) {
+            if (p.first) {
                 cout << "Record found: " << p.second << endl;
             } else {
                 cout << "Record not found" << endl;
             }
+            check(m, idf);
+        } else if (cmd == "update") {
+            int k;
+            Record r;
+            is_cmd >> k >> r;
+            assert(!is_cmd.fail());
+            cout << "UPDATE " << k << " -> " << r << endl;
+            Record olr = idf.update(k, r);
+            m.erase(k);
+            m.insert({k, r});
+            cout << "Record updated. Old record: " << olr << endl;
             check(m, idf);
         } else if (cmd == "check") {
             int n;
