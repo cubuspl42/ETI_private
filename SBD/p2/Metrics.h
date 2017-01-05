@@ -5,7 +5,6 @@
 #ifndef P2_METRICS_H
 #define P2_METRICS_H
 
-
 struct Metrics {
     bool enabled = true;
     int page_reads = 0;
@@ -35,6 +34,8 @@ struct Metrics {
         header_reads = 0;
         header_writes = 0;
     }
+
+    void dump();
 };
 
 #endif //P2_METRICS_H

@@ -158,11 +158,7 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
         }
 
         if(m) {
-            cout << "Metrics: " << endl;
-            cout << "header reads: " << m->header_reads << " / ";
-            cout << "header writes: " << m->header_writes << " / ";
-            cout << "page reads: " << m->page_reads << " / ";
-            cout << "page writes: " << m->page_writes << endl;
+            m->dump();
         }
 
         if(cfg.print_intermediate) {
@@ -179,6 +175,7 @@ void parse_argv(int argc, const char **argv) {
         if(string{argv[i]} == "-v") cfg.verbose = true;
         if(string{argv[i]} == "-p") cfg.print_intermediate = true;
         if(string{argv[i]} == "-m") cfg.metrics = true;
+        if(string{argv[i]} == "-e") cfg.experiment = true;
         if (i < argc - 1) {
             if (string{argv[i]} == "-i") cfg.indexed_file_path = argv[i + 1];
             if (string{argv[i]} == "-t") cfg.cmd_file_path = argv[i + 1];
@@ -194,6 +191,25 @@ IndexedFile load_indexed_file(bool tmp) {
     }
 }
 
+static void experiment(IndexedFile &idf) {
+    cout << "D = " << D << endl;
+
+    int N = 16000;
+    int nr = 1000;
+    for(int i = 1; i <= N; ++i) {
+        Record r{0, 0, 0, 0, 0, i};
+        idf.insert(i, r, nullptr);
+    }
+
+    Metrics m;
+    for(int i = 0; i < nr; ++i) {
+        idf.find(rand() % N, &m);
+    }
+
+    m.dump();
+    cout << m.page_reads / (double) nr << "/" << m.page_writes / (double) nr << endl;
+}
+
 /**
  * Flags:
  * -t <filename> -- read test commands from file <filename>
@@ -207,7 +223,9 @@ int main(int argc, const char *argv[]) {
 
     IndexedFile idf = load_indexed_file(cfg.indexed_file_path.empty());
 
-    if (cfg.cmd_file_path.size()) {
+    if(cfg.experiment) {
+        experiment(idf);
+    } else if (cfg.cmd_file_path.size()) {
         ifstream ifs_cmd{cfg.cmd_file_path};
         assert(ifs_cmd.good());
         exec_commands(idf, ifs_cmd);

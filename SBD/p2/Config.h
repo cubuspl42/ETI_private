@@ -15,6 +15,7 @@ struct Config {
     bool print_intermediate = false;
     bool verbose = false;
     bool metrics = false;
+    bool experiment = false;
 };
 
 extern Config cfg;

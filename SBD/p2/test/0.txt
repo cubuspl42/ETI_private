@@ -1,10 +1,6 @@
 insert 1 0 0 0 0 0 11
 insert 2 0 0 0 0 0 12
-insert 3 0 0 0 0 0 13
-insert 4 0 0 0 0 0 14
-insert 5 0 0 0 0 0 15
-insert 6 0 0 0 0 0 16
-insert 7 0 0 0 0 0 17
-remove 4
-remove 2
-remove 3
+remove 1
+find 2
+update 2 1 2 3 4 5 13
+print
