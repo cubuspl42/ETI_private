@@ -98,15 +98,17 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
         string cmd;
         is_cmd >> cmd;
 
-        Metrics metrics1;
-
         if (cmd == "insert") {
             int k;
             Record r;
             is_cmd >> k >> r;
             assert(!is_cmd.fail());
             cout << "INSERT " << k << " -> " << r << endl;
+
+            metrics.enable();
             idf.insert(k, r);
+            metrics.disable();
+
             m.insert({k, r});
             check(m, idf);
         } else if (cmd == "remove") {
@@ -114,7 +116,11 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
             is_cmd >> k;
             assert(!is_cmd.fail());
             cout << "REMOVE " << k << endl;
+
+            metrics.enable();
             Record r = idf.remove(k);
+            metrics.disable();
+
             cout << "Record removed: " << r << endl;
             m.erase(k);
             check(m, idf);
@@ -123,7 +129,11 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
             is_cmd >> k;
             assert(!is_cmd.fail());
             cout << "FIND " << k << endl;
+
+            metrics.enable();
             auto p = idf.find(k);
+            metrics.disable();
+
             if (p.first) {
                 cout << "Record found: " << p.second << endl;
             } else {
@@ -136,7 +146,11 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
             is_cmd >> k >> r;
             assert(!is_cmd.fail());
             cout << "UPDATE " << k << " -> " << r << endl;
+
+            metrics.enable();
             Record olr = idf.update(k, r);
+            metrics.disable();
+
             m.erase(k);
             m.insert({k, r});
             cout << "Record updated. Old record: " << olr << endl;
@@ -163,7 +177,7 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
         cout << "page reads: " << metrics.page_reads << " / ";
         cout << "page writes: " << metrics.page_writes << endl;
 
-        reset_metrics();
+        metrics.reset();
     }
     assert(!is_cmd.fail());
 
