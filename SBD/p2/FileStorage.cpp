@@ -1,7 +1,7 @@
 //
 // Created by kuba on 02.01.17.
 //
-
+#include "Config.h"
 #include "FileStorage.h"
 #include "Metrics.h"
 
@@ -59,7 +59,7 @@ void FileStorage::write_header(BTreeHeader header, Metrics *m) {
 void FileStorage::read_page(BNode &nd, int i, Metrics *m, string msg) {
     if(m) {
         m->inc_page_reads();
-        cout << "read_page: " << msg << " [" << i << "]" << endl;
+        if(cfg.verbose) cout << "read_page: " << msg << " [" << i << "]" << endl;
     }
     int rv;
     rv = fseek(file.get(), SIZEOF_BTREE_HEADER + i * SIZEOF_NODE, SEEK_SET);
@@ -77,7 +77,7 @@ void FileStorage::read_page(BNode &nd, int i, Metrics *m, string msg) {
 void FileStorage::write_page(const BNode &nd, int i, Metrics *m, string msg) {
     if(m) {
         m->inc_page_writes();
-        cout << "write_page: " << msg << " [" << i << "]" << endl;
+        if(cfg.verbose) cout << "write_page: " << msg << " [" << i << "]" << endl;
     }
     int rv;
     assert(i >= 0);

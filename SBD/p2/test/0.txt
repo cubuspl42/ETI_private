@@ -7,5 +7,4 @@ insert 6 0 0 0 0 0 16
 insert 7 0 0 0 0 0 17
 remove 4
 remove 2
-print
 remove 3

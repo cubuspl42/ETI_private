@@ -1,17 +1,15 @@
 #include "Record.h"
 #include "IndexedFile.h"
 #include "Metrics.h"
+#include "Config.h"
 
 #include <algorithm>
-#include <cassert>
 #include <cstring>
 #include <iostream>
 #include <tuple>
 #include <vector>
-#include <climits>
 #include <sstream>
 #include <cstdlib>
-#include <memory>
 #include <fstream>
 #include <math.h>
 #include <map>
@@ -24,15 +22,6 @@
 #endif
 
 using namespace std;
-
-struct Config {
-    string indexed_file_path;
-    string cmd_file_path;
-    bool print_intermediate = false;
-    bool verbose = false;
-};
-
-Config cfg;
 
 void die(string message) {
     cerr << message << endl;
@@ -100,16 +89,17 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
         string cmd;
         is_cmd >> cmd;
 
-        Metrics m;
+        Metrics metrics;
+        Metrics *m = cfg.metrics ? &metrics : nullptr;
 
         if (cmd == "insert") {
             int k;
             Record r;
             is_cmd >> k >> r;
             assert(!is_cmd.fail());
-            cout << endl << "INSERT " << k << " -> " << r << endl;
+            cout << "INSERT " << k << " -> " << r << endl;
 
-            idf.insert(k, r, &m);
+            idf.insert(k, r, m);
 
             mp.insert({k, r});
             check(mp, idf);
@@ -117,9 +107,9 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
             int k;
             is_cmd >> k;
             assert(!is_cmd.fail());
-            cout << endl << "REMOVE " << k << endl;
+            cout << "REMOVE " << k << endl;
 
-            Record r = idf.remove(k, &m);
+            Record r = idf.remove(k, m);
 
             cout << "Record removed: " << r << endl;
             mp.erase(k);
@@ -128,9 +118,9 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
             int k;
             is_cmd >> k;
             assert(!is_cmd.fail());
-            cout << endl << "FIND " << k << endl;
+            cout << "FIND " << k << endl;
 
-            auto p = idf.find(k, &m);
+            auto p = idf.find(k, m);
 
             if (p.first) {
                 cout << "Record found: " << p.second << endl;
@@ -143,9 +133,9 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
             Record r;
             is_cmd >> k >> r;
             assert(!is_cmd.fail());
-            cout << endl << "UPDATE " << k << " -> " << r << endl;
+            cout << "UPDATE " << k << " -> " << r << endl;
 
-            Record olr = idf.update(k, r, &m);
+            Record olr = idf.update(k, r, m);
 
             mp.erase(k);
             mp.insert({k, r});
@@ -167,15 +157,19 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
             die("Invalid command: " + cmd);
         }
 
-        cout << "Metrics: " << endl;
-        cout << "header reads: " << m.header_reads << " / ";
-        cout << "header writes: " << m.header_writes << " / ";
-        cout << "page reads: " << m.page_reads << " / ";
-        cout << "page writes: " << m.page_writes << endl;
+        if(m) {
+            cout << "Metrics: " << endl;
+            cout << "header reads: " << m->header_reads << " / ";
+            cout << "header writes: " << m->header_writes << " / ";
+            cout << "page reads: " << m->page_reads << " / ";
+            cout << "page writes: " << m->page_writes << endl;
+        }
 
         if(cfg.print_intermediate) {
             idf.dump();
         }
+
+        cout << endl;
     }
     assert(!is_cmd.fail());
 
@@ -186,6 +180,7 @@ void parse_argv(int argc, const char **argv) {
     for (int i = 0; i < argc; ++i) {
         if(string{argv[i]} == "-v") cfg.verbose = true;
         if(string{argv[i]} == "-p") cfg.print_intermediate = true;
+        if(string{argv[i]} == "-m") cfg.metrics = true;
         if (i < argc - 1) {
 //            if(string{argv[i]} == "-r") cfg.n_rand = atoi(argv[i+1]);
             if (string{argv[i]} == "-i") cfg.indexed_file_path = argv[i + 1];
