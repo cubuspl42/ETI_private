@@ -106,7 +106,7 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
             Record r;
             is_cmd >> k >> r;
             assert(!is_cmd.fail());
-            cout << "INSERT " << k << " -> " << r << endl;
+            cout << endl << "INSERT " << k << " -> " << r << endl;
 
             idf.insert(k, r, &m);
 
@@ -116,7 +116,7 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
             int k;
             is_cmd >> k;
             assert(!is_cmd.fail());
-            cout << "REMOVE " << k << endl;
+            cout << endl << "REMOVE " << k << endl;
 
             Record r = idf.remove(k, &m);
 
@@ -127,7 +127,7 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
             int k;
             is_cmd >> k;
             assert(!is_cmd.fail());
-            cout << "FIND " << k << endl;
+            cout << endl << "FIND " << k << endl;
 
             auto p = idf.find(k, &m);
 
@@ -142,7 +142,7 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
             Record r;
             is_cmd >> k >> r;
             assert(!is_cmd.fail());
-            cout << "UPDATE " << k << " -> " << r << endl;
+            cout << endl << "UPDATE " << k << " -> " << r << endl;
 
             Record olr = idf.update(k, r, &m);
 
