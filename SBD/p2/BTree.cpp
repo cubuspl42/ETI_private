@@ -88,6 +88,7 @@ int BTree::find(int x) {
     return rv.e.a;
 }
 
+// TODO: -stg, -mem
 void BTree::_fix_overflow(BTreeStorage &stg, vector<BNode> &mem, int lv) {
     BNode &nd = mem[lv];
 
