@@ -40,7 +40,7 @@ class BTree {
 
     BFindResult _find_max(BTreeStorage &stg, vector<BNode> &mem, int lv, int p);
 
-    CompensateStatus _compensate(BTreeStorage &stg, BNode &lnd, BNode &pnd, BNode &rnd);
+    CompensateStatus _compensate(BTreeStorage &stg, BNode &lnd, BNode &pnd);
 
     BElement _split(BNode &nd, BNode &nnd);
 

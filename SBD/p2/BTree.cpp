@@ -97,7 +97,7 @@ void BTree::_fix_overflow(BTreeStorage &stg, vector<BNode> &mem, int lv) {
 
         if (lv > 0) { // TODO: change if's order?
             BNode &pnd = mem[lv - 1];
-            if (_compensate(stg, nd, pnd, exnd) == COMPENSATE_OK) { // TODO: exnd inside compensate?
+            if (_compensate(stg, nd, pnd) == COMPENSATE_OK) {
                 stg.write_page(nd);
                 stg.write_page(pnd);
                 stg.write_page(exnd);
@@ -139,7 +139,7 @@ void BTree::_fix_underflow(BTreeStorage &stg, std::vector<BNode> &mem, int lv) {
             BNode &exnd = mem.back(); // extra node
 
             BNode &pnd = mem[lv - 1];
-            if (_compensate(stg, nd, pnd, exnd) == COMPENSATE_OK) {
+            if (_compensate(stg, nd, pnd) == COMPENSATE_OK) {
                 stg.write_page(nd);
                 stg.write_page(pnd);
                 stg.write_page(exnd);
@@ -336,7 +336,8 @@ static void distribute(BNode &lnd, BNode &rnd, BNode &pnd, int i) {
     }
 }
 
-CompensateStatus BTree::_compensate(BTreeStorage &stg, BNode &nd, BNode &pnd, BNode &snd) {
+CompensateStatus BTree::_compensate(BTreeStorage &stg, BNode &nd, BNode &pnd) {
+    BNode &snd = _extra_buf();
     int c = pnd.find_child(nd.idx); // C-index of @p in its parent
 
     if (c > 0) {
