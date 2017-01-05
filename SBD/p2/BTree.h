@@ -57,6 +57,8 @@ class BTree {
 
     void _resize_mem();
 
+    void _dump(int p, int i);
+
 public:
     BTree(BTreeStorage &stg);
 
@@ -90,8 +92,6 @@ public:
     int update(int x, int na);
 
     void for_each(function<void(BElement)> f);
-
-    void _dump(int p, int i);
 
     void dump();
 };
