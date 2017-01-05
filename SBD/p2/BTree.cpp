@@ -199,21 +199,6 @@ InsertStatus BTree::insert(int x, int a) {
     }
 }
 
-#if 0
-static BNode &max_leaf(PagedFile &pgf, int p) {
-    BNode &pg = pgf.read_page(p);
-    BPageBuf &pgb = pg.buf();
-    if(pgb.is_leaf()) {
-        return pg;
-    } else {
-        int rp = pgb.p(pgb.m());
-        return max_leaf(pgf, rp);
-    }
-}
-
-
-#endif
-
 int BTree::remove(int x) {
     _resize_mem();
     auto fr = _find(_stg, _mem, 0, hdr.s, x);
@@ -249,27 +234,6 @@ int BTree::update(int x, int na) {
     _stg.write_page(nd);
     return fr.e.a;
 }
-
-#if 0
-void BTree::_fix_leaf(BNode &pg) {
-    if(page_underflows(pg)) {
-        if(_compensate(<#initializer#>, <#initializer#>, <#initializer#>, <#initializer#>) == COMPENSATE_NOT_POSSIBLE) {
-            BNode &ppg = pgf.read_page(pg.parent());
-            BPageBuf &ppgb = ppg.buf();
-            int c = ppgb.find_child(pg.idx());
-            if(c < ppgb.m()) {
-                int rs = ppgb.p(c + 1);
-                BNode &rp = pgf.read_page(rs);
-                _merge(pg, rp, ppgb, c);
-            } else {
-                int ls = ppgb.p(c - 1);
-                BNode &lp = pgf.read_page(ls);
-                _merge(lp, pg, ppgb, c);
-            }
-        }
-    }
-}
-#endif
 
 static bool can_compensate(BNode &nda, BNode &ndb) {
     int sm = nda.m + ndb.m;
