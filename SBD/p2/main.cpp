@@ -180,11 +180,8 @@ void parse_argv(int argc, const char **argv) {
         if(string{argv[i]} == "-p") cfg.print_intermediate = true;
         if(string{argv[i]} == "-m") cfg.metrics = true;
         if (i < argc - 1) {
-//            if(string{argv[i]} == "-r") cfg.n_rand = atoi(argv[i+1]);
             if (string{argv[i]} == "-i") cfg.indexed_file_path = argv[i + 1];
             if (string{argv[i]} == "-t") cfg.cmd_file_path = argv[i + 1];
-//            if(string{argv[i]} == "-b") cfg.b = atoi(argv[i+1]);
-//            if(string{argv[i]} == "-n") cfg.n = atoi(argv[i+1]);
         }
     }
 }
@@ -199,11 +196,11 @@ IndexedFile load_indexed_file(bool tmp) {
 
 /**
  * Flags:
- * -r <n> -- generate <n> random records
  * -t <filename> -- read test commands from file <filename>
- * -b <value> -- specify records/page number
- * -n <value> -- specify number of buffers
+ * -i <filename> -- reads content file <filename> and its index <filename>_index
+ * -m -- print metrics
  * -p -- print intermediate states
+ * -v -- print verbose info (works with -m)
  */
 int main(int argc, const char *argv[]) {
     parse_argv(argc, argv);
