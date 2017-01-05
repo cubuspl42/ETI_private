@@ -19,15 +19,15 @@ public:
 
     IndexedFile(const string &path, string mode);
 
-    void insert(int k, Record r);
+    void insert(int k, Record r, Metrics *m);
 
-    pair<bool, Record> find(int k);
+    pair<bool, Record> find(int k, Metrics *m);
 
-    Record remove(int k);
+    Record remove(int k, Metrics *m);
 
-    Record update(int k, Record nr);
+    Record update(int k, Record nr, Metrics *m);
 
-    void for_each(function<void(int, Record)> f);
+    void for_each(function<void(int, Record)> f, Metrics *m);
 
     vector<pair<int, Record>> to_vector();
 

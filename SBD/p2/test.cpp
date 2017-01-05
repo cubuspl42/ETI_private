@@ -13,7 +13,7 @@ vector<BElement> bt2vec(BTree &bt) {
     vector<BElement> v;
     bt.for_each([&](BElement e) {
         v.push_back(e);
-    });
+    }, nullptr);
     return v;
 }
 
@@ -27,7 +27,7 @@ static void dump_vec(const vector<BElement> &v) {
 
 static void insert(set<BElement> &s, BTree &bt, BElement e) {
     s.insert(e);
-    bt.insert(e.x, e.a);
+    bt.insert(e.x, e.a, nullptr);
 }
 
 static void check(const set<BElement> &s, BTree &bt) {
@@ -140,7 +140,7 @@ static void test_find_simple() {
             }
     };
     BTree bt{ms};
-    int a = bt.find(2);
+    int a = bt.find(2, nullptr);
     assert(a == 123);
 }
 
@@ -156,7 +156,7 @@ static void test_find_not_found() {
             }
     };
     BTree bt{ms};
-    int a = bt.find(13);
+    int a = bt.find(13, nullptr);
     assert(a == NOT_FOUND);
 }
 
@@ -167,7 +167,7 @@ static void test_find_empty_tree() {
             {}
     };
     BTree bt{ms};
-    int a = bt.find(13);
+    int a = bt.find(13, nullptr);
     assert(a == NOT_FOUND);
 }
 
@@ -199,7 +199,7 @@ static void test_insert_simple() {
             }
     };
     BTree bt{ms};
-    bt.insert(3, 0);
+    bt.insert(3, 0, nullptr);
     assert(check_ms(ms, ms2));
 }
 
@@ -219,8 +219,8 @@ static void test_insert2() {
             }
     };
     BTree bt{ms};
-    bt.insert(20, 0);
-    bt.insert(30, 0);
+    bt.insert(20, 0, nullptr);
+    bt.insert(30, 0, nullptr);
     assert(check_ms(ms, ms2));
 }
 
@@ -242,7 +242,7 @@ static void test_split_root() {
             }
     };
     BTree bt{ms};
-    bt.insert(5, 6);
+    bt.insert(5, 6, nullptr);
     assert(check_ms(ms, ms2));
 }
 
@@ -265,7 +265,7 @@ static void test_insert_split_root_reuse() {
             }
     };
     BTree bt{ms};
-    bt.insert(5, 6);
+    bt.insert(5, 6, nullptr);
     assert(check_ms(ms, ms2));
 }
 
@@ -289,7 +289,7 @@ static void test_insert_split_root_reuse2() {
             }
     };
     BTree bt{ms};
-    bt.insert(5, 6);
+    bt.insert(5, 6, nullptr);
     assert(check_ms(ms, ms2));
 }
 
@@ -307,10 +307,10 @@ static void test_insert_full() {
             }
     };
     BTree bt{ms};
-    bt.insert(10, 0);
-    bt.insert(20, 0);
-    bt.insert(30, 0);
-    bt.insert(40, 0);
+    bt.insert(10, 0, nullptr);
+    bt.insert(20, 0, nullptr);
+    bt.insert(30, 0, nullptr);
+    bt.insert(40, 0, nullptr);
     assert(check_ms(ms, ms2));
 }
 
@@ -330,11 +330,11 @@ static void test_insert_stairs() {
             }
     };
     BTree bt{ms};
-    bt.insert(10, 0);
-    bt.insert(20, 0);
-    bt.insert(30, 0);
-    bt.insert(40, 0);
-    bt.insert(11, 0);
+    bt.insert(10, 0, nullptr);
+    bt.insert(20, 0, nullptr);
+    bt.insert(30, 0, nullptr);
+    bt.insert(40, 0, nullptr);
+    bt.insert(11, 0, nullptr);
     assert(check_ms(ms, ms2));
 }
 
@@ -354,15 +354,15 @@ static void test_insert_stairs2() {
             }
     };
     BTree bt{ms};
-    bt.insert(10, 0);
-    bt.insert(20, 0);
-    bt.insert(30, 0);
-    bt.insert(40, 0);
-    bt.insert(11, 0);
-    bt.insert(12, 0);
-    bt.insert(13, 0);
-    bt.insert(14, 0);
-    bt.insert(21, 0);
+    bt.insert(10, 0, nullptr);
+    bt.insert(20, 0, nullptr);
+    bt.insert(30, 0, nullptr);
+    bt.insert(40, 0, nullptr);
+    bt.insert(11, 0, nullptr);
+    bt.insert(12, 0, nullptr);
+    bt.insert(13, 0, nullptr);
+    bt.insert(14, 0, nullptr);
+    bt.insert(21, 0, nullptr);
     assert(check_ms(ms, ms2));
 }
 
@@ -383,16 +383,16 @@ static void test_insert_stairs3() {
             }
     };
     BTree bt{ms};
-    bt.insert(10, 0);
-    bt.insert(20, 0);
-    bt.insert(30, 0);
-    bt.insert(40, 0);
-    bt.insert(11, 0);
-    bt.insert(12, 0);
-    bt.insert(13, 0);
-    bt.insert(14, 0);
-    bt.insert(21, 0);
-    bt.insert(22, 0);
+    bt.insert(10, 0, nullptr);
+    bt.insert(20, 0, nullptr);
+    bt.insert(30, 0, nullptr);
+    bt.insert(40, 0, nullptr);
+    bt.insert(11, 0, nullptr);
+    bt.insert(12, 0, nullptr);
+    bt.insert(13, 0, nullptr);
+    bt.insert(14, 0, nullptr);
+    bt.insert(21, 0, nullptr);
+    bt.insert(22, 0, nullptr);
     assert(check_ms(ms, ms2));
 }
 
@@ -413,19 +413,19 @@ static void test_insert_stairs4() {
             }
     };
     BTree bt{ms};
-    bt.insert(10, 0);
-    bt.insert(20, 0);
-    bt.insert(30, 0);
-    bt.insert(40, 0);
-    bt.insert(11, 0);
-    bt.insert(12, 0);
-    bt.insert(13, 0);
-    bt.insert(14, 0);
-    bt.insert(21, 0);
-    bt.insert(22, 0);
-    bt.insert(23, 0);
-    bt.insert(24, 0);
-    bt.insert(31, 0);
+    bt.insert(10, 0, nullptr);
+    bt.insert(20, 0, nullptr);
+    bt.insert(30, 0, nullptr);
+    bt.insert(40, 0, nullptr);
+    bt.insert(11, 0, nullptr);
+    bt.insert(12, 0, nullptr);
+    bt.insert(13, 0, nullptr);
+    bt.insert(14, 0, nullptr);
+    bt.insert(21, 0, nullptr);
+    bt.insert(22, 0, nullptr);
+    bt.insert(23, 0, nullptr);
+    bt.insert(24, 0, nullptr);
+    bt.insert(31, 0, nullptr);
     // bt.insert(32, 0);
     // bt.insert(33, 0);
     // bt.insert(34, 0);
@@ -462,7 +462,7 @@ static void test_split_chained() {
             }
     };
     BTree bt{ms};
-    bt.insert(23, 0);
+    bt.insert(23, 0, nullptr);
     assert(check_ms(ms, ms2));
 }
 
@@ -486,7 +486,7 @@ static void test_compensate_even() {
             }
     };
     BTree bt{ms};
-    bt.insert(5, 0);
+    bt.insert(5, 0, nullptr);
     assert(check_ms(ms, ms2));
 }
 
@@ -510,7 +510,7 @@ static void test_compensate_odd() {
             }
     };
     BTree bt{ms};
-    bt.insert(3, 0);
+    bt.insert(3, 0, nullptr);
     assert(check_ms(ms, ms2));
 }
 
@@ -551,7 +551,7 @@ static void test_compensate_inner_node() {
             }
     };
     BTree bt{ms};
-    bt.insert(25, 0);
+    bt.insert(25, 0, nullptr);
     assert(check_ms(ms, ms2));
 }
 
@@ -575,7 +575,7 @@ static void test_compensate_left() {
             }
     };
     BTree bt{ms};
-    bt.insert(13, 0);
+    bt.insert(13, 0, nullptr);
     assert(check_ms(ms, ms2));
 }
 
@@ -599,7 +599,7 @@ static void test_remove_compensate_left() {
             }
     };
     BTree bt{ms};
-    bt.remove(12);
+    bt.remove(12, nullptr);
     assert(check_ms(ms, ms2));
 }
 
@@ -623,7 +623,7 @@ static void test_remove_compensate_right() {
             }
     };
     BTree bt{ms};
-    bt.remove(2);
+    bt.remove(2, nullptr);
     assert(check_ms(ms, ms2));
 }
 
@@ -651,7 +651,7 @@ static void test_remove_merge() {
             }
     };
     BTree bt{ms};
-    bt.remove(12);
+    bt.remove(12, nullptr);
     assert(check_ms(ms, ms2));
 }
 
@@ -679,7 +679,7 @@ static void test_remove_merge_p0() {
             }
     };
     BTree bt{ms};
-    bt.remove(2);
+    bt.remove(2, nullptr);
     assert(check_ms(ms, ms2));
 }
 
@@ -704,7 +704,7 @@ static void test_remove_merge_shrink() {
             }
     };
     BTree bt{ms};
-    bt.remove(2);
+    bt.remove(2, nullptr);
     assert(check_ms(ms, ms2));
 }
 
@@ -728,7 +728,7 @@ static void test_remove_swap() {
             }
     };
     BTree bt{ms};
-    bt.remove(10);
+    bt.remove(10, nullptr);
     assert(check_ms2(ms, ms2, bt));
 }
 
@@ -748,7 +748,7 @@ static void test_remove_root() {
             }
     };
     BTree bt{ms};
-    bt.remove(10);
+    bt.remove(10, nullptr);
     assert(check_ms2(ms, ms2, bt));
 }
 
@@ -772,7 +772,7 @@ static void test_update_simple() {
             }
     };
     BTree bt{ms};
-    assert(bt.update(13, 124) == 123);
+    assert(bt.update(13, 124, nullptr) == 123);
     assert(check_ms2(ms, ms2, bt));
 }
 

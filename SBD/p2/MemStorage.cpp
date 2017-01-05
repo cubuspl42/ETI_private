@@ -4,22 +4,23 @@
 
 #include "MemStorage.h"
 #include "BTreeStorage.h"
+#include "Metrics.h"
 
-BTreeHeader MemStorage::read_header() {
+BTreeHeader MemStorage::read_header(Metrics *m) {
     return _hdr;
 }
 
-void MemStorage::write_header(BTreeHeader header) {
+void MemStorage::write_header(BTreeHeader header, Metrics *m) {
     _hdr = header;
 }
 
-void MemStorage::read_page(BNode &pg, int i) {
+void MemStorage::read_page(BNode &pg, int i, Metrics *m) {
     assert(i >= 0);
     assert(i < (int) _nodes.size());
     pg = _nodes[i];
 }
 
-void MemStorage::write_page(const BNode &pg, int i) {
+void MemStorage::write_page(const BNode &pg, int i, Metrics *m) {
     assert(i >= 0);
     if(i >= (int) _nodes.size()) {
         _nodes.resize((unsigned long) (i + 1));

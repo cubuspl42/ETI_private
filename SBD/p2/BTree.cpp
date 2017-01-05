@@ -6,16 +6,17 @@
 #include "BNode.h"
 #include "BFindResult.h"
 #include "BElement.h"
+#include "Metrics.h"
 
 BNode &BTree::_extra_buf() {
     assert((int) _mem.size() == hdr.h + 1);
     return _mem.back();
 }
 
-void BTree::_allocate_node(BNode &nd) {
+void BTree::_allocate_node(BNode &nd, Metrics *m) {
     int f = hdr.f;
     if(f > -1) {
-        _stg.read_page(nd, f);
+        _stg.read_page(nd, f, m);
         hdr.f = nd.idx;
         nd.idx = f;
         nd.m = 0;
@@ -25,49 +26,48 @@ void BTree::_allocate_node(BNode &nd) {
     }
 }
 
-void BTree::_free_node(BNode &nd) {
+void BTree::_free_node(BNode &nd, Metrics *m) {
     int i = nd.idx;
     nd.idx = hdr.f;
     nd.m = 0;
     hdr.f = i;
-    _stg.write_page(nd, i); // TODO: Minimize page writes?
+    _stg.write_page(nd, i, m); // TODO: Minimize page writes?
 }
 
-BFindResult BTree::_find(int lv, int p, int x) {
+BFindResult BTree::_find(int lv, int p, int x, Metrics *m) {
     BNode &nd = _mem[lv];
-    _stg.read_page(nd, p);
-    int m = nd.m;
+    _stg.read_page(nd, p, m);
 
     auto nfr = nd.find(x);
     if (nfr.e.a != NOT_FOUND) {
         return BFindResult{p, nfr.e, lv, nfr.c};
     }
 
-    for (int i = 1; i <= m; ++i) {
+    for (int i = 1; i <= nd.m; ++i) {
         int xi = nd.e(i).x;
         if (x < xi) {
             int pi1 = nd.p(i - 1);
             if (pi1 == NIL) {
                 return BFindResult{p, {x, NOT_FOUND}, lv, NIL};
             } else {
-                return _find(lv + 1, pi1, x);
+                return _find(lv + 1, pi1, x, m);
             }
         }
     }
 
-    int xm = nd.e(m).x;
+    int xm = nd.e(nd.m).x;
     assert(x > xm);
-    int pm = nd.p(m);
+    int pm = nd.p(nd.m);
     if (pm == NIL) {
         return BFindResult{p, {x, NOT_FOUND}, lv, NIL};
     } else {
-        return _find(lv + 1, pm, x);
+        return _find(lv + 1, pm, x, m);
     }
 }
 
-BFindResult BTree::_find_max(int lv, int p) {
+BFindResult BTree::_find_max(int lv, int p, Metrics *m) {
     BNode &nd = _mem[lv];
-    _stg.read_page(nd, p);
+    _stg.read_page(nd, p, m);
 
     if(nd.is_leaf()) {
         int ei = nd.m;
@@ -75,21 +75,21 @@ BFindResult BTree::_find_max(int lv, int p) {
         return BFindResult{nd.idx, mxe, lv, ei};
     } else {
         int mxp = nd.p(nd.m);
-        return _find_max(lv + 1, mxp);
+        return _find_max(lv + 1, mxp, m);
     }
 }
 
-int BTree::find(int x) {
+int BTree::find(int x, Metrics *m) {
     if (hdr.s == NIL) {
         return NOT_FOUND;
     }
     _resize_mem();
-    auto rv = _find(0, hdr.s, x);
+    auto rv = _find(0, hdr.s, x, m);
     return rv.e.a;
 }
 
 // TODO: -stg, -mem
-void BTree::_fix_overflow(int lv) {
+void BTree::_fix_overflow(int lv, Metrics *m) {
     BNode &nd = _mem[lv];
 
     if (nd.overflows()) {
@@ -98,39 +98,39 @@ void BTree::_fix_overflow(int lv) {
 
         if (lv > 0) { // TODO: change if's order?
             BNode &pnd = _mem[lv - 1];
-            if (_compensate(nd, pnd) == COMPENSATE_OK) {
-                _stg.write_page(nd);
-                _stg.write_page(pnd);
-                _stg.write_page(exnd);
+            if (_compensate(nd, pnd, m) == COMPENSATE_OK) {
+                _stg.write_page(nd, m);
+                _stg.write_page(pnd, m);
+                _stg.write_page(exnd, m);
                 return;
             }
         }
 
-        _allocate_node(exnd);
+        _allocate_node(exnd, m);
         int nnd_idx = exnd.idx;
 
         BElement me = _split(nd, exnd);
 
-        _stg.write_page(nd); // TODO: Minimize page writes?
-        _stg.write_page(exnd);
-        _stg.write_header(hdr); // TODO: When to write header?
+//        _stg.write_page(nd, m); // TODO: Minimize page writes?
+        _stg.write_page(exnd, m);
+        _stg.write_header(hdr, m); // TODO: When to write header?
 
         if (lv == 0) {
-            _grow(nd.idx, me, nnd_idx);
+            _grow(nd.idx, me, nnd_idx, m);
         } else {
             BNode &pnd = _mem[lv - 1];
             int c = pnd.find_child(nd.idx);
             pnd.psplit(c, nd.idx, me, nnd_idx);
 
-            _fix_overflow(lv - 1);
+            _fix_overflow(lv - 1, m);
         }
     }
 
     assert(!nd.overflows());
-    _stg.write_page(nd);
+    _stg.write_page(nd, m);
 }
 
-void BTree::_fix_underflow(int lv) {
+void BTree::_fix_underflow(int lv, Metrics *m) {
     BNode &nd = _mem[lv];
 
     if(lv > 0) {
@@ -140,10 +140,10 @@ void BTree::_fix_underflow(int lv) {
             BNode &exnd = _mem.back(); // extra node
 
             BNode &pnd = _mem[lv - 1];
-            if (_compensate(nd, pnd) == COMPENSATE_OK) {
-                _stg.write_page(nd);
-                _stg.write_page(pnd);
-                _stg.write_page(exnd);
+            if (_compensate(nd, pnd, m) == COMPENSATE_OK) {
+                _stg.write_page(nd, m);
+                _stg.write_page(pnd, m);
+                _stg.write_page(exnd, m);
                 return;
             }
 
@@ -154,38 +154,38 @@ void BTree::_fix_underflow(int lv) {
                 assert(pi > 0);
                 int pl = pnd.p(pi - 1);
                 int ei = pi;
-                _stg.read_page(exnd, pl);
-                _merge(exnd, nd, pnd, ei);
+                _stg.read_page(exnd, pl, m);
+                _merge(exnd, nd, pnd, ei, m);
                 // TODO: write exnd here?
             } else {
                 assert(pi < pnd.m);
                 int pr = pnd.p(pi + 1);
                 int ei = pi + 1;
-                _stg.read_page(exnd, pr);
-                _merge(nd, exnd, pnd, ei);
+                _stg.read_page(exnd, pr, m);
+                _merge(nd, exnd, pnd, ei, m);
                 // TODO: write exnd here?
             }
 
-            _fix_underflow(lv - 1);
+            _fix_underflow(lv - 1, m);
         }
     } else {
         if(nd.m == 0) {
-            _shrink(nd);
+            _shrink(nd, m);
         }
     }
 
     if(nd.m > 0) {
-        _stg.write_page(nd);
+        _stg.write_page(nd, m);
     }
 }
 
-InsertStatus BTree::insert(int x, int a) {
+InsertStatus BTree::insert(int x, int a, Metrics *m) {
     _resize_mem();
     if (hdr.s == NIL) {
-        _grow(NIL, BElement{x, a}, NIL);
+        _grow(NIL, BElement{x, a}, NIL, m);
         return OK;
     } else {
-        auto fr = _find(0, hdr.s, x);
+        auto fr = _find(0, hdr.s, x, m);
 
         if (fr.e.a != NOT_FOUND) {
             assert(fr.e.a == a);
@@ -195,44 +195,44 @@ InsertStatus BTree::insert(int x, int a) {
         BNode &nd = _mem[hdr.h - 1];
         nd.insert(BElement{x, a});
 
-        _fix_overflow(hdr.h - 1);
+        _fix_overflow(hdr.h - 1, m);
         return OK;
     }
 }
 
-int BTree::remove(int x) {
+int BTree::remove(int x, Metrics *m) {
     _resize_mem();
-    auto fr = _find(0, hdr.s, x);
+    auto fr = _find(0, hdr.s, x, m);
     assert(fr.e.a != NOT_FOUND);
 
     BNode &nd = _mem[fr.lv];
 
     if (fr.lv != hdr.h - 1) {
         int lp = nd.p(fr.c - 1);
-        auto frm = _find_max(fr.lv + 1, lp);
+        auto frm = _find_max(fr.lv + 1, lp, m);
         assert(frm.lv == hdr.h - 1);
 
         nd.set_e(fr.c, frm.e);
-        _stg.write_page(nd);
+        _stg.write_page(nd, m);
 
         BNode &mnd = _mem[hdr.h - 1];
         mnd.remove(frm.c);
-        _fix_underflow(frm.lv);
+        _fix_underflow(frm.lv, m);
         return frm.e.a;
     } else {
         nd.remove(fr.c);
-        _fix_underflow(fr.lv);
+        _fix_underflow(fr.lv, m);
         return fr.e.a;
     }
 }
 
-int BTree::update(int x, int na) {
+int BTree::update(int x, int na, Metrics *m) {
     _resize_mem();
-    auto fr = _find(0, hdr.s, x);
+    auto fr = _find(0, hdr.s, x, m);
     assert(fr.e.a != NOT_FOUND);
     BNode &nd = _mem[fr.lv];
     nd.set_e(fr.c, BElement{x, na});
-    _stg.write_page(nd);
+    _stg.write_page(nd, m);
     return fr.e.a;
 }
 
@@ -301,14 +301,14 @@ static void distribute(BNode &lnd, BNode &rnd, BNode &pnd, int i) {
     }
 }
 
-CompensateStatus BTree::_compensate(BNode &nd, BNode &pnd) {
+CompensateStatus BTree::_compensate(BNode &nd, BNode &pnd, Metrics *m) {
     BNode &snd = _extra_buf();
     int c = pnd.find_child(nd.idx); // C-index of @p in its parent
 
     if (c > 0) {
         /* Try left sibling */
         int ls = pnd.p(c - 1);
-        _stg.read_page(snd, ls);
+        _stg.read_page(snd, ls, m);
         if (can_compensate(snd, nd)) {
             distribute(snd, nd, pnd, c);
             return COMPENSATE_OK;
@@ -318,7 +318,7 @@ CompensateStatus BTree::_compensate(BNode &nd, BNode &pnd) {
     if (c < pnd.m) {
         /* Try right sibling */
         int rs = pnd.p(c + 1);
-        _stg.read_page(snd, rs);
+        _stg.read_page(snd, rs, m);
         if (can_compensate(snd, nd)) {
             distribute(nd, snd, pnd, c + 1);
             return COMPENSATE_OK;
@@ -338,7 +338,7 @@ BElement BTree::_split(BNode &nd, BNode &nnd) {
     return me;
 }
 
-void BTree::_merge(BNode &lp, BNode &rp, BNode &pnd, int ei) {
+void BTree::_merge(BNode &lp, BNode &rp, BNode &pnd, int ei, Metrics *m) {
     BElement pe = pnd.e(ei);
     rp.data.front().e = pe;
 
@@ -354,38 +354,38 @@ void BTree::_merge(BNode &lp, BNode &rp, BNode &pnd, int ei) {
 
     pnd.emerge(ei, lp.idx);
 
-    _stg.write_page(lp); // TODO: Minimize page writes?
+    _stg.write_page(lp, m); // TODO: Minimize page writes?
 
-    _free_node(rp);
+    _free_node(rp, m);
 }
 
-void BTree::_for_each(int p, int lv, function<void(BElement)> f) {
+void BTree::_for_each(int p, int lv, function<void(BElement)> f, Metrics *m) {
     if (p == NIL) {
         return;
     }
 
     BNode &nd = _mem[lv];
-    _stg.read_page(nd, p);
+    _stg.read_page(nd, p, m);
 
     int p0 = nd.p(0);
-    _for_each(p0, lv + 1, f);
+    _for_each(p0, lv + 1, f, m);
 
     for (int i = 1; i <= nd.m; ++i) {
         BElement e = nd.e(i);
         f(e);
         int pi = nd.p(i);
-        _for_each(pi, lv + 1, f);
+        _for_each(pi, lv + 1, f, m);
     }
 }
 
-void BTree::for_each(function<void(BElement)> f) {
-    _for_each(hdr.s, 0, f);
+void BTree::for_each(function<void(BElement)> f, Metrics *m) {
+    _for_each(hdr.s, 0, f, m);
 }
 
 
-void BTree::_dump(int p, int lv) {
+void BTree::_dump(int p, int lv, Metrics *m) {
     BNode &nd = _mem[lv];
-    _stg.read_page(nd, p);
+    _stg.read_page(nd, p, m);
     assert(nd.m > 0);
     assert(nd.idx == p);
     cout << "{" << lv << "} " << p << ": [";
@@ -406,33 +406,33 @@ void BTree::_dump(int p, int lv) {
     for (int i = 0; i <= nd.m; ++i) {
         int pi = nd.p(i);
         if (pi > -1) {
-            _dump(pi, lv + 1);
+            _dump(pi, lv + 1, m);
         }
     }
 }
 
 void BTree::dump() {
-    _dump(hdr.s, 0);
+    _dump(hdr.s, 0, nullptr);
 }
 
 BTree::BTree(BTreeStorage &stg) : _stg{stg} {
-    hdr = stg.read_header();
+    hdr = stg.read_header(nullptr);
     _resize_mem();
 }
 
-void BTree::_grow(int p0, BElement e1, int p1) {
+void BTree::_grow(int p0, BElement e1, int p1, Metrics *m) {
     BNode &exnd = _extra_buf();
-    _allocate_node(exnd);
+    _allocate_node(exnd, m);
     exnd.m = 1;
     exnd.data[0] = Ep{BElement{-1, -1}, p0};
     exnd.data[1] = Ep{e1, p1};
     hdr.s = exnd.idx;
     ++hdr.h;
-    _stg.write_header(hdr);
-    _stg.write_page(exnd);
+    _stg.write_header(hdr, m);
+    _stg.write_page(exnd, m);
 }
 
-void BTree::_shrink(BNode &rnd) {
+void BTree::_shrink(BNode &rnd, Metrics *m) {
     assert(rnd.idx == hdr.s);
     assert(rnd.m == 0);
     int p0 = rnd.p(0);
@@ -442,8 +442,8 @@ void BTree::_shrink(BNode &rnd) {
     --hdr.h;
     hdr.s = p0;
 
-    _free_node(rnd);
-    _stg.write_header(hdr);
+    _free_node(rnd, m);
+    _stg.write_header(hdr, m);
 }
 
 void BTree::_resize_mem() {

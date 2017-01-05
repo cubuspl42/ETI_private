@@ -7,7 +7,7 @@
 
 
 struct Metrics {
-    bool enabled = false;
+    bool enabled = true;
     int page_reads = 0;
     int page_writes = 0;
     int header_reads = 0;
@@ -29,14 +29,6 @@ struct Metrics {
         if(enabled) ++header_writes;
     }
 
-    void enable() {
-        enabled = true;
-    }
-
-    void disable() {
-        enabled = false;
-    }
-
     void reset() {
         page_reads = 0;
         page_writes = 0;
@@ -44,7 +36,5 @@ struct Metrics {
         header_writes = 0;
     }
 };
-
-extern Metrics metrics;
 
 #endif //P2_METRICS_H

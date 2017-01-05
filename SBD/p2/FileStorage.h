@@ -7,6 +7,7 @@
 
 
 #include "BTreeStorage.h"
+#include "Metrics.h"
 
 class FileStorage : public BTreeStorage {
     FilePtr file;
@@ -15,13 +16,13 @@ class FileStorage : public BTreeStorage {
 public:
     FileStorage(string path, string mode);
 
-    virtual BTreeHeader read_header() override;
+    virtual BTreeHeader read_header(Metrics *m) override;
 
-    virtual void write_header(BTreeHeader header) override;
+    virtual void write_header(BTreeHeader header, Metrics *m) override;
 
-    virtual void read_page(BNode &pg, int i) override;
+    virtual void read_page(BNode &pg, int i, Metrics *m) override;
 
-    virtual void write_page(const BNode &pg, int i) override;
+    virtual void write_page(const BNode &pg, int i, Metrics *m) override;
 };
 
 

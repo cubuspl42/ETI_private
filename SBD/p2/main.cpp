@@ -58,7 +58,7 @@ static vector<pair<int, Record>> idf2vec(IndexedFile &idf) {
     vector<pair<int, Record>> v;
     idf.for_each([&](int k, Record r) {
         v.push_back({k, r});
-    });
+    }, nullptr);
     return v;
 }
 
@@ -90,13 +90,15 @@ static void check(const map<int, Record> &s, IndexedFile &idf) {
 }
 
 void exec_commands(IndexedFile &idf, istream &is_cmd) {
-    map<int, Record> m;
+    map<int, Record> mp;
     idf.for_each([&](int k, Record r) {
-        m.insert({k, r});
-    });
+        mp.insert({k, r});
+    }, nullptr);
     while (is_cmd.good()) {
         string cmd;
         is_cmd >> cmd;
+
+        Metrics m;
 
         if (cmd == "insert") {
             int k;
@@ -105,41 +107,35 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
             assert(!is_cmd.fail());
             cout << "INSERT " << k << " -> " << r << endl;
 
-            metrics.enable();
-            idf.insert(k, r);
-            metrics.disable();
+            idf.insert(k, r, &m);
 
-            m.insert({k, r});
-            check(m, idf);
+            mp.insert({k, r});
+            check(mp, idf);
         } else if (cmd == "remove") {
             int k;
             is_cmd >> k;
             assert(!is_cmd.fail());
             cout << "REMOVE " << k << endl;
 
-            metrics.enable();
-            Record r = idf.remove(k);
-            metrics.disable();
+            Record r = idf.remove(k, &m);
 
             cout << "Record removed: " << r << endl;
-            m.erase(k);
-            check(m, idf);
+            mp.erase(k);
+            check(mp, idf);
         } else if (cmd == "find") {
             int k;
             is_cmd >> k;
             assert(!is_cmd.fail());
             cout << "FIND " << k << endl;
 
-            metrics.enable();
-            auto p = idf.find(k);
-            metrics.disable();
+            auto p = idf.find(k, &m);
 
             if (p.first) {
                 cout << "Record found: " << p.second << endl;
             } else {
                 cout << "Record not found" << endl;
             }
-            check(m, idf);
+            check(mp, idf);
         } else if (cmd == "update") {
             int k;
             Record r;
@@ -147,14 +143,12 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
             assert(!is_cmd.fail());
             cout << "UPDATE " << k << " -> " << r << endl;
 
-            metrics.enable();
-            Record olr = idf.update(k, r);
-            metrics.disable();
+            Record olr = idf.update(k, r, &m);
 
-            m.erase(k);
-            m.insert({k, r});
+            mp.erase(k);
+            mp.insert({k, r});
             cout << "Record updated. Old record: " << olr << endl;
-            check(m, idf);
+            check(mp, idf);
         } else if (cmd == "check") {
             int n;
             is_cmd >> n;
@@ -172,12 +166,10 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
         }
 
         cout << "Metrics: " << endl;
-        cout << "header reads: " << metrics.header_reads << " / ";
-        cout << "header writes: " << metrics.header_writes << " / ";
-        cout << "page reads: " << metrics.page_reads << " / ";
-        cout << "page writes: " << metrics.page_writes << endl;
-
-        metrics.reset();
+        cout << "header reads: " << m.header_reads << " / ";
+        cout << "header writes: " << m.header_writes << " / ";
+        cout << "page reads: " << m.page_reads << " / ";
+        cout << "page writes: " << m.page_writes << endl;
     }
     assert(!is_cmd.fail());
 
