@@ -17,7 +17,7 @@ class IndexedFile {
 public:
     IndexedFile() = delete;
 
-    IndexedFile(const string &path);
+    IndexedFile(const string &path, string mode);
 
     void insert(int k, Record r);
 

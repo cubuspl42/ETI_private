@@ -1,5 +1,6 @@
 #include "Record.h"
 #include "IndexedFile.h"
+#include "Metrics.h"
 
 #include <algorithm>
 #include <cassert>
@@ -97,6 +98,8 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
         string cmd;
         is_cmd >> cmd;
 
+        Metrics metrics1;
+
         if (cmd == "insert") {
             int k;
             Record r;
@@ -153,6 +156,14 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
         } else {
             die("Invalid command: " + cmd);
         }
+
+        cout << "Metrics: " << endl;
+        cout << "header reads: " << metrics.header_reads << " / ";
+        cout << "header writes: " << metrics.header_writes << " / ";
+        cout << "page reads: " << metrics.page_reads << " / ";
+        cout << "page writes: " << metrics.page_writes << endl;
+
+        reset_metrics();
     }
     assert(!is_cmd.fail());
 
@@ -177,9 +188,9 @@ void parse_argv(int argc, const char **argv) {
 
 IndexedFile load_indexed_file(bool tmp) {
     if(tmp) {
-        return IndexedFile(tmpnam(nullptr));
+        return IndexedFile(tmpnam(nullptr), "wb+");
     } else {
-        return IndexedFile{cfg.indexed_file_path};
+        return IndexedFile{cfg.indexed_file_path, "rb+"};
     }
 }
 

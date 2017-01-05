@@ -11,7 +11,7 @@
 class ContentFile {
     FilePtr file;
 public:
-    ContentFile(string path);
+    ContentFile(string path, string mode);
     Record read_record(int i);
     int write_record(Record r);
     void write_record(Record r, int i);

@@ -25,5 +25,6 @@ insert 14343 0 0 0 0 0 0
 insert 1345 0 0 0 0 0 0
 insert 894 0 0 0 0 0 0
 insert 1435 0 0 0 0 0 0
+print
 insert 451 0 0 0 0 0 0
 print

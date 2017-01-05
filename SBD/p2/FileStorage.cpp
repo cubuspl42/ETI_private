@@ -3,6 +3,7 @@
 //
 
 #include "FileStorage.h"
+#include "Metrics.h"
 
 #include <string>
 
@@ -15,7 +16,7 @@ const size_t SIZEOF_NODE_DATA = NODE_DATA_STORAGE_SIZE * sizeof(Ep);
 const size_t SIZEOF_NODE_HEADER = 2 * sizeof(int);
 const size_t SIZEOF_NODE = SIZEOF_NODE_HEADER + SIZEOF_NODE_DATA;
 
-FileStorage::FileStorage(string path) : file{fopen(path.c_str(), "rb+"), file_close} {
+FileStorage::FileStorage(string path, string mode) : file{file_open(path, mode), file_close} {
     if(!check_header()) {
         cerr << "FileStorage(" + path + "): Header not found; rewriting" << endl;
         BTreeHeader hdr{};
@@ -36,6 +37,7 @@ bool FileStorage::check_header() {
 
 
 BTreeHeader FileStorage::read_header() {
+    ++metrics.header_reads;
     int rv;
     rv = fseek(file.get(), 0, SEEK_SET);
     assert(rv > -1);
@@ -46,6 +48,7 @@ BTreeHeader FileStorage::read_header() {
 }
 
 void FileStorage::write_header(BTreeHeader header) {
+    ++metrics.header_writes;
     int rv;
     rv = fseek(file.get(), 0, SEEK_SET);
     assert(rv > -1);
@@ -54,6 +57,7 @@ void FileStorage::write_header(BTreeHeader header) {
 }
 
 void FileStorage::read_page(BNode &nd, int i) {
+    ++metrics.page_reads;
     int rv;
     rv = fseek(file.get(), SIZEOF_BTREE_HEADER + i * SIZEOF_NODE, SEEK_SET);
     assert(rv > -1);
@@ -68,6 +72,7 @@ void FileStorage::read_page(BNode &nd, int i) {
 }
 
 void FileStorage::write_page(const BNode &nd, int i) {
+    ++metrics.page_writes;
     int rv;
     assert(i >= 0);
     rv = fseek(file.get(), SIZEOF_BTREE_HEADER + i * SIZEOF_NODE, SEEK_SET);

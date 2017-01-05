@@ -1,8 +1,8 @@
 #include "IndexedFile.h"
 
 
-IndexedFile::IndexedFile(const string &path)
-        : storage{path + "_index"}, index{storage}, content{path} {}
+IndexedFile::IndexedFile(const string &path, string mode)
+        : storage{path + "_index", mode}, index{storage}, content{path, mode} {}
 
 void IndexedFile::insert(int k, Record r) {
     assert(index.find(k) == NOT_FOUND);

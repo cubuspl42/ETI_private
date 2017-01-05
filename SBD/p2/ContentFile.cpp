@@ -6,7 +6,7 @@
 
 #include <cassert>
 
-ContentFile::ContentFile(string path) : file{fopen(path.c_str(), "rb+"), file_close} {
+ContentFile::ContentFile(string path, string mode) : file{file_open(path, mode), file_close} {
     cerr << "Loaded content file " << path << endl;
 }
 

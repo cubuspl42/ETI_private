@@ -13,7 +13,7 @@ class FileStorage : public BTreeStorage {
 
     bool check_header();
 public:
-    FileStorage(string path);
+    FileStorage(string path, string mode);
 
     virtual BTreeHeader read_header() override;
 
