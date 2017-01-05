@@ -10,6 +10,8 @@
 
 class FileStorage : public BTreeStorage {
     FilePtr file;
+
+    bool check_header();
 public:
     FileStorage(string path);
 

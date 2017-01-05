@@ -91,6 +91,9 @@ static void check(const map<int, Record> &s, IndexedFile &idf) {
 
 void exec_commands(IndexedFile &idf, istream &is_cmd) {
     map<int, Record> m;
+    idf.for_each([&](int k, Record r) {
+        m.insert({k, r});
+    });
     while (is_cmd.good()) {
         string cmd;
         is_cmd >> cmd;
@@ -168,6 +171,14 @@ void parse_argv(int argc, const char **argv) {
     }
 }
 
+IndexedFile load_indexed_file(bool tmp) {
+    if(tmp) {
+        return IndexedFile(tmpnam(nullptr));
+    } else {
+        return IndexedFile{cfg.indexed_file_path};
+    }
+}
+
 /**
  * Flags:
  * -r <n> -- generate <n> random records
@@ -179,9 +190,7 @@ void parse_argv(int argc, const char **argv) {
 int main(int argc, const char *argv[]) {
     parse_argv(argc, argv);
 
-    IndexedFile idf = cfg.indexed_file_path.size() ?
-                      IndexedFile{cfg.indexed_file_path} :
-                      tmp_indexed_file();
+    IndexedFile idf = load_indexed_file(cfg.indexed_file_path.empty());
 
     if (cfg.cmd_file_path.size()) {
         ifstream ifs_cmd{cfg.cmd_file_path};

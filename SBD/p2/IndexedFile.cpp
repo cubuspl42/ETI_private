@@ -1,7 +1,7 @@
 #include "IndexedFile.h"
 
 
-IndexedFile::IndexedFile(string path)
+IndexedFile::IndexedFile(const string &path)
         : storage{path + "_index"}, index{storage}, content{path} {}
 
 void IndexedFile::insert(int k, Record r) {
@@ -57,8 +57,4 @@ void IndexedFile::dump() {
     storage.dump();
     cout << "index.dump:" << endl;
     index.dump();
-}
-
-IndexedFile tmp_indexed_file() {
-    return IndexedFile(tmpnam(nullptr));
 }

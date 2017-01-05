@@ -17,7 +17,8 @@ class IndexedFile {
     ContentFile content;
 public:
     IndexedFile() = delete;
-    IndexedFile(string path);
+
+    IndexedFile(const string &path);
 
     void insert(int k, Record r);
 
@@ -33,7 +34,5 @@ public:
 
     void dump();
 };
-
-IndexedFile tmp_indexed_file();
 
 #endif //P2_INDEXEDFILE_H

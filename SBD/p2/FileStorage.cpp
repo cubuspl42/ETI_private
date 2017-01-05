@@ -15,13 +15,25 @@ const size_t SIZEOF_NODE_DATA = NODE_DATA_STORAGE_SIZE * sizeof(Ep);
 const size_t SIZEOF_NODE_HEADER = 2 * sizeof(int);
 const size_t SIZEOF_NODE = SIZEOF_NODE_HEADER + SIZEOF_NODE_DATA;
 
-FileStorage::FileStorage(string path) : file{fopen(path.c_str(), "wb+"), file_close} {
-    BTreeHeader hdr;
-    hdr.s = NIL;
-    hdr.h = 0;
-    hdr.n = 0;
-    write_header(hdr);
+FileStorage::FileStorage(string path) : file{fopen(path.c_str(), "rb+"), file_close} {
+    if(!check_header()) {
+        cerr << "FileStorage(" + path + "): Header not found; rewriting" << endl;
+        BTreeHeader hdr{};
+        write_header(hdr);
+    } else {
+        cerr << "FileStorage(" + path + "): Header found" << endl;
+    }
 }
+
+bool FileStorage::check_header() {
+    int rv;
+    rv = fseek(file.get(), 0, SEEK_SET);
+    assert(rv > -1);
+    BTreeHeader hdr;
+    rv = fread(&hdr, sizeof(hdr), 1, file.get());
+    return (rv == 1);
+}
+
 
 BTreeHeader FileStorage::read_header() {
     int rv;
