@@ -53,6 +53,19 @@ vector<pair<int, Record>> IndexedFile::to_vector() {
 }
 
 void IndexedFile::dump() {
+    cout << "content: " << endl;
+    index.for_each([&](BElement e) {
+        Record r = content.read_record(e.a);
+        cout << e.x << ": " << r << endl;
+    }, nullptr);
+    cout <<endl;
+
+    cout << "index: " << endl;
+    index.for_each([&](BElement e) {
+        cout << e.x << ": " << e.a << endl;
+    }, nullptr);
+    cout <<endl;
+
     cout << "storage.dump:" << endl;
     storage.dump();
     cout << "index.dump:" << endl;

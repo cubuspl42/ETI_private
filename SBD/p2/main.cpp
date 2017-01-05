@@ -29,6 +29,7 @@ struct Config {
     string indexed_file_path;
     string cmd_file_path;
     bool print_intermediate = false;
+    bool verbose = false;
 };
 
 Config cfg;
@@ -183,6 +184,7 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
 
 void parse_argv(int argc, const char **argv) {
     for (int i = 0; i < argc; ++i) {
+        if(string{argv[i]} == "-v") cfg.verbose = true;
         if(string{argv[i]} == "-p") cfg.print_intermediate = true;
         if (i < argc - 1) {
 //            if(string{argv[i]} == "-r") cfg.n_rand = atoi(argv[i+1]);
