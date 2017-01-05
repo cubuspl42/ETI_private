@@ -28,6 +28,7 @@ using namespace std;
 struct Config {
     string indexed_file_path;
     string cmd_file_path;
+    bool print_intermediate = false;
 };
 
 Config cfg;
@@ -170,6 +171,10 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
         cout << "header writes: " << m.header_writes << " / ";
         cout << "page reads: " << m.page_reads << " / ";
         cout << "page writes: " << m.page_writes << endl;
+
+        if(cfg.print_intermediate) {
+            idf.dump();
+        }
     }
     assert(!is_cmd.fail());
 
@@ -178,7 +183,7 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
 
 void parse_argv(int argc, const char **argv) {
     for (int i = 0; i < argc; ++i) {
-//        if(string{argv[i]} == "-p") cfg.print_intermediate = true;
+        if(string{argv[i]} == "-p") cfg.print_intermediate = true;
         if (i < argc - 1) {
 //            if(string{argv[i]} == "-r") cfg.n_rand = atoi(argv[i+1]);
             if (string{argv[i]} == "-i") cfg.indexed_file_path = argv[i + 1];
