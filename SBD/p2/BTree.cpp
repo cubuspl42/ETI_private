@@ -31,7 +31,7 @@ void BTree::_free_node(BNode &nd, Metrics *m) {
     nd.idx = hdr.f;
     nd.m = 0;
     hdr.f = i;
-    _stg.write_page(nd, i, m, "_free_node"); // TODO: Minimize page writes?
+    _stg.write_page(nd, i, m, "_free_node");
 }
 
 BFindResult BTree::_find(int lv, int p, int x, Metrics *m) {
@@ -88,13 +88,12 @@ int BTree::find(int x, Metrics *m) {
     return rv.e.a;
 }
 
-// TODO: -stg, -mem
 void BTree::_fix_overflow(int lv, Metrics *m) {
     BNode &nd = _mem[lv];
 
     if (nd.overflows()) {
         assert(nd.m == 2 * D + 1);
-        BNode &exnd = _mem.back(); // extra node
+        BNode &exnd = _extra_buf();
 
         if (lv > 0) { // TODO: change if's order?
             BNode &pnd = _mem[lv - 1];
@@ -111,7 +110,6 @@ void BTree::_fix_overflow(int lv, Metrics *m) {
 
         BElement me = _split(nd, exnd);
 
-//        _stg.write_page(nd, m); // TODO: Minimize page writes?
         _stg.write_page(exnd, m, "_fix_overflow (post-split)");
         _stg.write_header(hdr, m); // TODO: When to write header?
 
@@ -156,14 +154,12 @@ void BTree::_fix_underflow(int lv, Metrics *m) {
                 int ei = pi;
                 _stg.read_page(exnd, pl, m, "_fix_underflow (exnd; pre-merge; pi > 0)");
                 _merge(exnd, nd, pnd, ei, m);
-                // TODO: write exnd here?
             } else {
                 assert(pi < pnd.m);
                 int pr = pnd.p(pi + 1);
                 int ei = pi + 1;
                 _stg.read_page(exnd, pr, m, "_fix_underflow (exnd; pre-merge; pi = 0)");
                 _merge(nd, exnd, pnd, ei, m);
-                // TODO: write exnd here?
             }
 
             _fix_underflow(lv - 1, m);
@@ -354,8 +350,7 @@ void BTree::_merge(BNode &lp, BNode &rp, BNode &pnd, int ei, Metrics *m) {
 
     pnd.emerge(ei, lp.idx);
 
-    _stg.write_page(lp, m, "_merge (lp)"); // TODO: Minimize page writes?
-
+    _stg.write_page(lp, m, "_merge (lp)");
     _free_node(rp, m);
 }
 

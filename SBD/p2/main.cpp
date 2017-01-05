@@ -172,8 +172,6 @@ void exec_commands(IndexedFile &idf, istream &is_cmd) {
         cout << endl;
     }
     assert(!is_cmd.fail());
-
-    // TODO: przeglądania całej zawartości pliku i indeksu zgodnie z kolejnością wartości klucza
 }
 
 void parse_argv(int argc, const char **argv) {
@@ -189,9 +187,6 @@ void parse_argv(int argc, const char **argv) {
 //            if(string{argv[i]} == "-n") cfg.n = atoi(argv[i+1]);
         }
     }
-
-    // TODO: Program powinien dawać możliwość wyświetlania zawartości pliku i indeksu po
-    // każdej operacji zmieniającej zawartość pliku (tj. po wstawieniu, aktualizacji lub usunięciu rekordu)
 }
 
 IndexedFile load_indexed_file(bool tmp) {
