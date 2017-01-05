@@ -9,4 +9,3 @@ remove 4
 remove 2
 print
 remove 3
-print

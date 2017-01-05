@@ -141,9 +141,9 @@ void BTree::_fix_underflow(int lv, Metrics *m) {
 
             BNode &pnd = _mem[lv - 1];
             if (_compensate(nd, pnd, m) == COMPENSATE_OK) {
-                _stg.write_page(nd, m, "_fix_underflow (post-compensate; nd)");
-                _stg.write_page(pnd, m, "_fix_underflow (post-compensate; pnd)");
-                _stg.write_page(exnd, m, "_fix_underflow (post-compensate; exnd)");
+                _stg.write_page(nd, m, "_fix_underflow (nd; post-compensate)");
+                _stg.write_page(pnd, m, "_fix_underflow (pnd; post-compensate)");
+                _stg.write_page(exnd, m, "_fix_underflow (exnd; post-compensate)");
                 return;
             }
 
@@ -154,28 +154,28 @@ void BTree::_fix_underflow(int lv, Metrics *m) {
                 assert(pi > 0);
                 int pl = pnd.p(pi - 1);
                 int ei = pi;
-                _stg.read_page(exnd, pl, m, "_fix_underflow (pre-merge; pi > 0)");
+                _stg.read_page(exnd, pl, m, "_fix_underflow (exnd; pre-merge; pi > 0)");
                 _merge(exnd, nd, pnd, ei, m);
                 // TODO: write exnd here?
             } else {
                 assert(pi < pnd.m);
                 int pr = pnd.p(pi + 1);
                 int ei = pi + 1;
-                _stg.read_page(exnd, pr, m, "_fix_underflow (pre-merge; pi = 0)");
+                _stg.read_page(exnd, pr, m, "_fix_underflow (exnd; pre-merge; pi = 0)");
                 _merge(nd, exnd, pnd, ei, m);
                 // TODO: write exnd here?
             }
 
             _fix_underflow(lv - 1, m);
+        } else {
+            _stg.write_page(nd, m, "_fix_underflow (nd; lv > 0)");
         }
     } else {
         if(nd.m == 0) {
             _shrink(nd, m);
+        } else {
+            _stg.write_page(nd, m, "_fix_underflow (nd; lv = 0)");
         }
-    }
-
-    if(nd.m > 0) {
-        _stg.write_page(nd, m, "_fix_underflow (nd)");
     }
 }
 
@@ -308,7 +308,7 @@ CompensateStatus BTree::_compensate(BNode &nd, BNode &pnd, Metrics *m) {
     if (c > 0) {
         /* Try left sibling */
         int ls = pnd.p(c - 1);
-        _stg.read_page(snd, ls, m, "_compensate (left)");
+        _stg.read_page(snd, ls, m, "_compensate (exnd; left)");
         if (can_compensate(snd, nd)) {
             distribute(snd, nd, pnd, c);
             return COMPENSATE_OK;
@@ -318,7 +318,7 @@ CompensateStatus BTree::_compensate(BNode &nd, BNode &pnd, Metrics *m) {
     if (c < pnd.m) {
         /* Try right sibling */
         int rs = pnd.p(c + 1);
-        _stg.read_page(snd, rs, m, "_compensate (right)");
+        _stg.read_page(snd, rs, m, "_compensate (exnd; right)");
         if (can_compensate(snd, nd)) {
             distribute(nd, snd, pnd, c + 1);
             return COMPENSATE_OK;
